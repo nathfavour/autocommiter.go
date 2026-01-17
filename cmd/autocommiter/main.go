@@ -1,0 +1,337 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
+
+	"github.com/fatih/color"
+	"github.com/nathfavour/autocommiter-go/internal/config"
+	"github.com/nathfavour/autocommiter-go/internal/models"
+	"github.com/nathfavour/autocommiter-go/internal/processor"
+	"github.com/spf13/cobra"
+)
+
+var (
+	repoPath string
+	noPush   bool
+	force    bool
+
+	// Version metadata (injected by GoReleaser)
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
+func main() {
+	var rootCmd = &cobra.Command{
+		Use:     "autocommiter",
+		Short:   "Auto-generate git commit messages using AI",
+		Version: fmt.Sprintf("%s (%s, %s)", version, commit, date),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return processor.GenerateCommit(repoPath, noPush, force)
+		},
+	}
+
+	rootCmd.PersistentFlags().StringVarP(&repoPath, "repo", "r", "", "Path to git repository (defaults to current directory)")
+	rootCmd.PersistentFlags().BoolVarP(&noPush, "no-push", "n", false, "Skip pushing after commit")
+	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "Don't ask for confirmation before committing")
+
+	var generateCmd = &cobra.Command{
+		Use:   "generate",
+		Short: "Generate commit message and commit changes",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return processor.GenerateCommit(repoPath, noPush, force)
+		},
+	}
+	rootCmd.AddCommand(generateCmd)
+
+	var setApiKeyCmd = &cobra.Command{
+		Use:   "set-api-key [KEY]",
+		Short: "Set GitHub API key",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var key string
+			if len(args) > 0 {
+				key = args[0]
+			} else {
+				fmt.Print(color.CyanString("Enter GitHub API key (will be stored securely): "))
+				reader := bufio.NewReader(os.Stdin)
+				key, _ = reader.ReadString('\n')
+				key = strings.TrimSpace(key)
+			}
+
+			if key == "" {
+				return fmt.Errorf("API key cannot be empty")
+			}
+
+			if err := config.SetAPIKey(key); err != nil {
+				return err
+			}
+			color.Green("✓ API key saved!")
+			return nil
+		},
+	}
+	rootCmd.AddCommand(setApiKeyCmd)
+
+	var getApiKeyCmd = &cobra.Command{
+		Use:   "get-api-key",
+		Short: "Get stored API key",
+		Run: func(cmd *cobra.Command, args []string) {
+			key, _ := config.GetAPIKey()
+			if key != "" {
+				masked := "****"
+				if len(key) > 8 {
+					masked = key[:4] + "..." + key[len(key)-4:]
+				}
+				color.Cyan("🔑 API Key: %s", color.YellowString(masked))
+			} else {
+				color.Yellow("ℹ️ No API key set. Use 'set-api-key' to add one.")
+			}
+		},
+	}
+	rootCmd.AddCommand(getApiKeyCmd)
+
+	var refreshModelsCmd = &cobra.Command{
+		Use:   "refresh-models",
+		Short: "Refresh available AI models from GitHub Models API",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			apiKey, err := config.GetAPIKey()
+			if err != nil || apiKey == "" {
+				return fmt.Errorf("API key not set. Use 'set-api-key' first.")
+			}
+
+			color.Cyan("🔄 Fetching models from GitHub Models API...")
+			success, msg, count, err := models.RefreshModelList(apiKey)
+			if err != nil {
+				return err
+			}
+
+			if success {
+				color.Green("✓ %d models cached", count)
+			} else {
+				color.Red("✗ %s", msg)
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(refreshModelsCmd)
+
+	var listModelsCmd = &cobra.Command{
+		Use:   "list-models",
+		Short: "List available AI models",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			available, err := models.ListAvailableModels()
+			if err != nil {
+				return err
+			}
+			current, _ := config.GetSelectedModel()
+
+			color.New(color.FgCyan, color.Bold).Println("📋 Available Models:\n")
+			for _, m := range available {
+				marker := " "
+				if m.ID == current {
+					marker = "→"
+				}
+				color.Green("%s %s", marker, color.CyanString(m.Name))
+				if m.FriendlyName != nil {
+					color.New(color.Faint).Printf("   %s\n", *m.FriendlyName)
+				}
+				if m.Summary != nil {
+					color.New(color.Faint).Printf("   %s\n", *m.Summary)
+				}
+				fmt.Println()
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(listModelsCmd)
+
+	var selectModelCmd = &cobra.Command{
+		Use:   "select-model",
+		Short: "Select default AI model",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			available, err := models.ListAvailableModels()
+			if err != nil || len(available) == 0 {
+				return fmt.Errorf("no models available")
+			}
+
+			color.New(color.FgCyan, color.Bold).Println("🤖 Select a Model:\n")
+			for i, m := range available {
+				friendly := m.Name
+				if m.FriendlyName != nil {
+					friendly = *m.FriendlyName
+				}
+				fmt.Printf("%d. %s (%s)\n", i+1, color.CyanString(m.Name), color.New(color.Faint).Sprint(friendly))
+			}
+
+			fmt.Print(color.CyanString("\nEnter choice (1-%d): ", len(available)))
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			choice, err := strconv.Atoi(strings.TrimSpace(input))
+			if err != nil || choice < 1 || choice > len(available) {
+				return fmt.Errorf("invalid choice")
+			}
+
+			selected := available[choice-1]
+			if err := config.SetSelectedModel(selected.ID); err != nil {
+				return err
+			}
+			color.Green("✓ Selected: %s", color.CyanString(selected.Name))
+			return nil
+		},
+	}
+	rootCmd.AddCommand(selectModelCmd)
+
+	var getModelCmd = &cobra.Command{
+		Use:   "get-model",
+		Short: "Get current default model",
+		Run: func(cmd *cobra.Command, args []string) {
+			model, _ := config.GetSelectedModel()
+			color.Cyan("🤖 Current Model: %s", color.YellowString(model))
+		},
+	}
+	rootCmd.AddCommand(getModelCmd)
+
+	var toggleGitmojiCmd = &cobra.Command{
+		Use:   "toggle-gitmoji",
+		Short: "Enable/disable gitmoji prefixes",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := false
+			if cfg.EnableGitmoji != nil {
+				current = *cfg.EnableGitmoji
+			}
+			newVal := !current
+			cfg.EnableGitmoji = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ Gitmoji enabled")
+			} else {
+				color.Green("✓ Gitmoji %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleGitmojiCmd)
+
+	var toggleSkipConfirmationCmd = &cobra.Command{
+		Use:   "toggle-skip-confirmation",
+		Short: "Enable/disable skipping commit confirmation",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := false
+			if cfg.SkipConfirmation != nil {
+				current = *cfg.SkipConfirmation
+			}
+			newVal := !current
+			cfg.SkipConfirmation = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ Skip Confirmation enabled")
+			} else {
+				color.Green("✓ Skip Confirmation %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleSkipConfirmationCmd)
+
+	var getConfigCmd = &cobra.Command{
+		Use:   "get-config",
+		Short: "Display current configuration",
+		Run: func(cmd *cobra.Command, args []string) {
+			cfg, _ := config.LoadConfig()
+			color.New(color.FgCyan, color.Bold).Println("⚙️  Configuration:\n")
+
+			color.Cyan("API Key:")
+			if cfg.APIKey != nil && *cfg.APIKey != "" {
+				key := *cfg.APIKey
+				masked := "****"
+				if len(key) > 8 {
+					masked = key[:4] + "..." + key[len(key)-4:]
+				}
+				fmt.Printf("  %s\n", color.YellowString(masked))
+			} else {
+				color.New(color.Faint).Println("  Not set")
+			}
+
+			color.Cyan("\nSelected Model:")
+			model := "gpt-4o-mini"
+			if cfg.SelectedModel != nil {
+				model = *cfg.SelectedModel
+			}
+			fmt.Printf("  %s\n", color.YellowString(model))
+
+			color.Cyan("\nGitmoji Enabled:")
+			gitmoji := false
+			if cfg.EnableGitmoji != nil {
+				gitmoji = *cfg.EnableGitmoji
+			}
+			if gitmoji {
+				color.Green("  Yes")
+			} else {
+				color.Red("  No")
+			}
+
+			color.Cyan("\nUpdate Gitignore:")
+			update := false
+			if cfg.UpdateGitignore != nil {
+				update = *cfg.UpdateGitignore
+			}
+			if update {
+				color.Green("  Yes")
+			} else {
+				color.Red("  No")
+			}
+
+			color.Cyan("\nSkip Confirmation:")
+			skip := false
+			if cfg.SkipConfirmation != nil {
+				skip = *cfg.SkipConfirmation
+			}
+			if skip {
+				color.Green("  Yes")
+			} else {
+				color.Red("  No")
+			}
+		},
+	}
+	rootCmd.AddCommand(getConfigCmd)
+
+	var resetConfigCmd = &cobra.Command{
+		Use:   "reset-config",
+		Short: "Reset configuration to defaults",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			defaultCfg := config.DefaultConfig()
+			if err := config.SaveConfig(defaultCfg); err != nil {
+				return err
+			}
+			color.Green("✓ Configuration reset to defaults!")
+			return nil
+		},
+	}
+	rootCmd.AddCommand(resetConfigCmd)
+
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number of autocommiter",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("autocommiter version %s\n", version)
+			fmt.Printf("commit: %s\n", commit)
+			fmt.Printf("build date: %s\n", date)
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
