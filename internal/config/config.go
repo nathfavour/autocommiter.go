@@ -13,6 +13,7 @@ type Config struct {
 	EnableGitmoji     *bool    `json:"enable_gitmoji"`
 	UpdateGitignore   *bool    `json:"update_gitignore"`
 	SkipConfirmation  *bool    `json:"skip_confirmation"`
+	AutoUpdate        *bool    `json:"auto_update"`
 	GitignorePatterns []string `json:"gitignore_patterns"`
 }
 
@@ -22,6 +23,7 @@ func DefaultConfig() Config {
 	enableGitmoji := false
 	updateGitignore := false
 	skipConfirmation := false
+	autoUpdate := true
 
 	return Config{
 		APIKey:            &apiKey,
@@ -29,6 +31,7 @@ func DefaultConfig() Config {
 		EnableGitmoji:     &enableGitmoji,
 		UpdateGitignore:   &updateGitignore,
 		SkipConfirmation:  &skipConfirmation,
+		AutoUpdate:        &autoUpdate,
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
 	}
 }

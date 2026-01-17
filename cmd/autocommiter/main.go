@@ -11,6 +11,7 @@ import (
 	"github.com/nathfavour/autocommiter-go/internal/config"
 	"github.com/nathfavour/autocommiter-go/internal/models"
 	"github.com/nathfavour/autocommiter-go/internal/processor"
+	"github.com/nathfavour/autocommiter-go/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +27,11 @@ var (
 )
 
 func main() {
+	cfg, _ := config.LoadConfig()
+	if cfg.AutoUpdate != nil && *cfg.AutoUpdate {
+		updater.CheckForUpdates(version)
+	}
+
 	var rootCmd = &cobra.Command{
 		Use:     "autocommiter",
 		Short:   "Auto-generate git commit messages using AI",
@@ -128,7 +134,7 @@ func main() {
 			}
 			current, _ := config.GetSelectedModel()
 
-			color.New(color.FgCyan, color.Bold).Println("📋 Available Models:\n")
+			color.New(color.FgCyan, color.Bold).Println("📋 Available Models:")
 			for _, m := range available {
 				marker := " "
 				if m.ID == current {
@@ -157,7 +163,7 @@ func main() {
 				return fmt.Errorf("no models available")
 			}
 
-			color.New(color.FgCyan, color.Bold).Println("🤖 Select a Model:\n")
+			color.New(color.FgCyan, color.Bold).Println("🤖 Select a Model:")
 			for i, m := range available {
 				friendly := m.Name
 				if m.FriendlyName != nil {
@@ -244,12 +250,37 @@ func main() {
 	}
 	rootCmd.AddCommand(toggleSkipConfirmationCmd)
 
+	var toggleAutoUpdateCmd = &cobra.Command{
+		Use:   "toggle-auto-update",
+		Short: "Enable/disable automatic update checks",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := true
+			if cfg.AutoUpdate != nil {
+				current = *cfg.AutoUpdate
+			}
+			newVal := !current
+			cfg.AutoUpdate = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ Auto-update checks enabled")
+			} else {
+				color.Green("✓ Auto-update checks %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleAutoUpdateCmd)
+
 	var getConfigCmd = &cobra.Command{
 		Use:   "get-config",
 		Short: "Display current configuration",
 		Run: func(cmd *cobra.Command, args []string) {
 			cfg, _ := config.LoadConfig()
-			color.New(color.FgCyan, color.Bold).Println("⚙️  Configuration:\n")
+			color.New(color.FgCyan, color.Bold).Println("⚙️  Configuration:")
 
 			color.Cyan("API Key:")
 			if cfg.APIKey != nil && *cfg.APIKey != "" {
@@ -298,6 +329,17 @@ func main() {
 				skip = *cfg.SkipConfirmation
 			}
 			if skip {
+				color.Green("  Yes")
+			} else {
+				color.Red("  No")
+			}
+
+			color.Cyan("\nAuto-Update Enabled:")
+			auto := true
+			if cfg.AutoUpdate != nil {
+				auto = *cfg.AutoUpdate
+			}
+			if auto {
 				color.Green("  Yes")
 			} else {
 				color.Red("  No")
