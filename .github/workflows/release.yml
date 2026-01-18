@@ -6,9 +6,6 @@ on:
       - master
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - master
 
 permissions:
   contents: write
@@ -29,30 +26,22 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Cache Go modules
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
-      - name: Cache GoReleaser
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/goreleaser
-          key: ${{ runner.os }}-goreleaser-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-goreleaser-
+      - name: Update rolling tag
+        if: github.ref == 'refs/heads/master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME='latest'
+          echo "Updating rolling tag: $TAG_NAME to ${{ github.sha }}"
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
+          git tag -f "$TAG_NAME" ${{ github.sha }}
+          git push -f origin "$TAG_NAME"
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: ${{ startsWith(github.ref, 'refs/tags/') && 'release --clean' || 'release --clean --snapshot' }}
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
