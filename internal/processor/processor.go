@@ -142,7 +142,8 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 		model = *cfg.SelectedModel
 	}
 
-	color.Cyan("🤖 Generating with model: %s...", color.New(color.Faint).Sprint(model))
+	color.New(color.FgCyan).Fprint(os.Stderr, "🤖 Generating with model: ")
+	color.New(color.FgCyan, color.Faint).Fprintln(os.Stderr, model, "...")
 
 	fileChanges, err := summarizer.BuildFileChanges(repoRoot)
 	if err != nil {

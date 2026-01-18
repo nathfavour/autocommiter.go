@@ -56,6 +56,20 @@ func main() {
 	}
 	rootCmd.AddCommand(generateCmd)
 
+	var generateMessageCmd = &cobra.Command{
+		Use:   "generate-message",
+		Short: "Generate and output only the commit message (no commit/push)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			msg, err := processor.GenerateMessage(repoPath)
+			if err != nil {
+				return err
+			}
+			fmt.Print(msg)
+			return nil
+		},
+	}
+	rootCmd.AddCommand(generateMessageCmd)
+
 	var setApiKeyCmd = &cobra.Command{
 		Use:   "set-api-key [KEY]",
 		Short: "Set GitHub API key (optional if 'gh auth login' is used)",
@@ -84,11 +98,21 @@ func main() {
 	}
 	rootCmd.AddCommand(setApiKeyCmd)
 
+	var rawKey bool
 	var getApiKeyCmd = &cobra.Command{
 		Use:   "get-api-key",
 		Short: "Get stored API key",
 		Run: func(cmd *cobra.Command, args []string) {
 			key, _ := config.GetAPIKey()
+			token := auth.GetToken(key)
+
+			if rawKey {
+				if token != "" {
+					fmt.Print(token)
+				}
+				return
+			}
+
 			if key != "" {
 				masked := "****"
 				if len(key) > 8 {
@@ -96,7 +120,6 @@ func main() {
 				}
 				color.Cyan("🔑 API Key: %s", color.YellowString(masked))
 			} else {
-				token := auth.GetToken("")
 				if token != "" {
 					user := auth.GetGithubUser()
 					color.Green("✓ Authenticated via GitHub CLI (%s)", user)
@@ -107,6 +130,7 @@ func main() {
 			}
 		},
 	}
+	getApiKeyCmd.Flags().BoolVar(&rawKey, "raw", false, "Output raw token (useful for scripting)")
 	rootCmd.AddCommand(getApiKeyCmd)
 
 	var refreshModelsCmd = &cobra.Command{
@@ -201,14 +225,20 @@ func main() {
 	}
 	rootCmd.AddCommand(selectModelCmd)
 
+	var rawModel bool
 	var getModelCmd = &cobra.Command{
 		Use:   "get-model",
 		Short: "Get current default model",
 		Run: func(cmd *cobra.Command, args []string) {
 			model, _ := config.GetSelectedModel()
+			if rawModel {
+				fmt.Print(model)
+				return
+			}
 			color.Cyan("🤖 Current Model: %s", color.YellowString(model))
 		},
 	}
+	getModelCmd.Flags().BoolVar(&rawModel, "raw", false, "Output raw model ID")
 	rootCmd.AddCommand(getModelCmd)
 
 	var toggleGitmojiCmd = &cobra.Command{
