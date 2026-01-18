@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/nathfavour/autocommiter-go/internal/auth"
 	"github.com/nathfavour/autocommiter-go/internal/config"
 )
 
@@ -159,7 +160,12 @@ func UpdateCachedModels(models []ModelInfo) error {
 }
 
 func RefreshModelList(apiKey string) (bool, string, int, error) {
-	models, err := FetchAvailableModels(apiKey)
+	token := auth.GetToken(apiKey)
+	if token == "" {
+		return false, "No API key provided and GitHub CLI not authenticated", 0, fmt.Errorf("authentication required")
+	}
+
+	models, err := FetchAvailableModels(token)
 	if err != nil {
 		return false, fmt.Sprintf("Failed to fetch models: %v", err), 0, err
 	}

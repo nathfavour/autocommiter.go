@@ -9,6 +9,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/nathfavour/autocommiter-go/internal/api"
+	"github.com/nathfavour/autocommiter-go/internal/auth"
 	"github.com/nathfavour/autocommiter-go/internal/config"
 	"github.com/nathfavour/autocommiter-go/internal/git"
 	"github.com/nathfavour/autocommiter-go/internal/gitmoji"
@@ -120,8 +121,14 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 func GenerateMessage(repoRoot string) (string, error) {
 	cfg, _ := config.LoadConfig()
 
-	if cfg.APIKey != nil && *cfg.APIKey != "" {
-		if message, err := TryAPIGeneration(repoRoot, *cfg.APIKey, cfg); err == nil {
+	apiKey := ""
+	if cfg.APIKey != nil {
+		apiKey = *cfg.APIKey
+	}
+
+	token := auth.GetToken(apiKey)
+	if token != "" {
+		if message, err := TryAPIGeneration(repoRoot, token, cfg); err == nil {
 			return message, nil
 		}
 	}

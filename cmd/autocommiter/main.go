@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/nathfavour/autocommiter-go/internal/auth"
 	"github.com/nathfavour/autocommiter-go/internal/config"
 	"github.com/nathfavour/autocommiter-go/internal/models"
 	"github.com/nathfavour/autocommiter-go/internal/processor"
@@ -57,7 +58,8 @@ func main() {
 
 	var setApiKeyCmd = &cobra.Command{
 		Use:   "set-api-key [KEY]",
-		Short: "Set GitHub API key",
+		Short: "Set GitHub API key (optional if 'gh auth login' is used)",
+		Long:  "Set your GitHub Models API key. Note: This is optional if you are already authenticated with the GitHub CLI ('gh auth login').",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var key string
 			if len(args) > 0 {
@@ -94,7 +96,14 @@ func main() {
 				}
 				color.Cyan("🔑 API Key: %s", color.YellowString(masked))
 			} else {
-				color.Yellow("ℹ️ No API key set. Use 'set-api-key' to add one.")
+				token := auth.GetToken("")
+				if token != "" {
+					user := auth.GetGithubUser()
+					color.Green("✓ Authenticated via GitHub CLI (%s)", user)
+				} else {
+					color.Yellow("ℹ️ No API key set and GitHub CLI not authenticated.")
+					color.Cyan("👉 Use 'set-api-key' or run 'gh auth login'")
+				}
 			}
 		},
 	}
@@ -104,9 +113,10 @@ func main() {
 		Use:   "refresh-models",
 		Short: "Refresh available AI models from GitHub Models API",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			apiKey, err := config.GetAPIKey()
-			if err != nil || apiKey == "" {
-				return fmt.Errorf("API key not set. Use 'set-api-key' first.")
+			apiKey, _ := config.GetAPIKey()
+			token := auth.GetToken(apiKey)
+			if token == "" {
+				return fmt.Errorf("API key not set and GitHub CLI not authenticated. Use 'set-api-key' or 'gh auth login'")
 			}
 
 			color.Cyan("🔄 Fetching models from GitHub Models API...")
@@ -283,16 +293,23 @@ func main() {
 			cfg, _ := config.LoadConfig()
 			color.New(color.FgCyan, color.Bold).Println("⚙️  Configuration:")
 
-			color.Cyan("API Key:")
+			color.Cyan("Authentication:")
 			if cfg.APIKey != nil && *cfg.APIKey != "" {
 				key := *cfg.APIKey
 				masked := "****"
 				if len(key) > 8 {
 					masked = key[:4] + "..." + key[len(key)-4:]
 				}
-				fmt.Printf("  %s\n", color.YellowString(masked))
+				fmt.Printf("  Manual: %s\n", color.YellowString(masked))
 			} else {
-				color.New(color.Faint).Println("  Not set")
+				token := auth.GetToken("")
+				if token != "" {
+					user := auth.GetGithubUser()
+					color.Green("  GitHub CLI: Authenticated (%s)", user)
+				} else {
+					color.Red("  Not Authenticated")
+					color.New(color.Faint).Println("  (Use 'set-api-key' or 'gh auth login')")
+				}
 			}
 
 			color.Cyan("\nSelected Model:")
