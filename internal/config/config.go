@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 )
 
@@ -14,6 +15,7 @@ type Config struct {
 	UpdateGitignore   *bool    `json:"update_gitignore"`
 	SkipConfirmation  *bool    `json:"skip_confirmation"`
 	AutoUpdate        *bool    `json:"auto_update"`
+	BuildFromSource   *bool    `json:"build_from_source"`
 	GitignorePatterns []string `json:"gitignore_patterns"`
 }
 
@@ -24,6 +26,7 @@ func DefaultConfig() Config {
 	updateGitignore := false
 	skipConfirmation := false
 	autoUpdate := true
+	buildFromSource := false
 
 	return Config{
 		APIKey:            &apiKey,
@@ -32,6 +35,7 @@ func DefaultConfig() Config {
 		UpdateGitignore:   &updateGitignore,
 		SkipConfirmation:  &skipConfirmation,
 		AutoUpdate:        &autoUpdate,
+		BuildFromSource:   &buildFromSource,
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
 	}
 }
@@ -82,6 +86,18 @@ func LoadConfig() (Config, error) {
 	var config Config
 	if err := json.Unmarshal(content, &config); err != nil {
 		return DefaultConfig(), nil
+	}
+
+	// Opinionated Detection: If both go and git are installed, this is a developer environment.
+	_, errGo := exec.LookPath("go")
+	_, errGit := exec.LookPath("git")
+	if errGo == nil && errGit == nil {
+		// Automatically enable build from source if not already set
+		if config.BuildFromSource == nil || !*config.BuildFromSource {
+			val := true
+			config.BuildFromSource = &val
+			_ = SaveConfig(config)
+		}
 	}
 
 	return config, nil

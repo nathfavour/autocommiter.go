@@ -352,6 +352,17 @@ func main() {
 				color.Red("  No")
 			}
 
+			color.Cyan("\nUpdate Channel:")
+			buildFromSource := false
+			if cfg.BuildFromSource != nil {
+				buildFromSource = *cfg.BuildFromSource
+			}
+			if buildFromSource {
+				color.Green("  Build From Source (Beta)")
+			} else {
+				color.Yellow("  Stable (Binary)")
+			}
+
 			color.Cyan("\nAuto-Update Enabled:")
 			auto := true
 			if cfg.AutoUpdate != nil {

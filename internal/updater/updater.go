@@ -6,9 +6,11 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"runtime"
 
 	"github.com/fatih/color"
+	"github.com/nathfavour/autocommiter-go/internal/config"
 )
 
 const repo = "nathfavour/autocommiter.go"
@@ -53,6 +55,25 @@ func getLatestTag() (string, error) {
 }
 
 func SeamlessUpdate(currentVersion string) error {
+	cfg, _ := config.LoadConfig()
+	buildFromSource := false
+	if cfg.BuildFromSource != nil {
+		buildFromSource = *cfg.BuildFromSource
+	}
+
+	if buildFromSource {
+		color.Cyan("🛠️  Build From Source mode enabled.")
+		color.Yellow("📥 Updating via 'go install'...")
+		cmd := exec.Command("go", "install", "github.com/nathfavour/autocommiter-go/cmd/autocommiter@latest")
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to build from source: %w", err)
+		}
+		color.Green("✨ Successfully built and installed latest version from source!")
+		return nil
+	}
+
 	latest, err := getLatestTag()
 	if err != nil {
 		return fmt.Errorf("failed to check for updates: %w", err)
