@@ -6,6 +6,13 @@ on:
       - master
     tags:
       - 'v*'
+    paths:
+      - 'cmd/**'
+      - 'internal/**'
+      - 'go.mod'
+      - 'go.sum'
+      - '.github/workflows/release.yml'
+      - '.goreleaser.yaml'
 
 permissions:
   contents: write
