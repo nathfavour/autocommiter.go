@@ -21,19 +21,27 @@ esac
 if [ "$OS" = "darwin" ]; then
     OS="darwin"
 elif [ "$OS" = "linux" ]; then
-    OS="linux"
+    # Check for Android (Termux)
+    if [ -n "$TERMUX_VERSION" ] || [ -d "/data/data/com.termux" ]; then
+        OS="android"
+    else
+        OS="linux"
+    fi
 else
     echo "Unsupported OS: $OS"
     exit 1
 fi
 
-ARCHIVE_EXTENSION="tar.gz"
+BINARY_NAME="autocommiter-${OS}-${ARCH}"
+if [ "$OS" = "windows" ]; then
+    BINARY_NAME+=".exe"
+fi
 
 echo "Detected Platform: $OS/$ARCH"
 
 # Get latest release tag
 echo "Fetching release metadata..."
-LATEST_TAG=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")' || true)
+LATEST_TAG=$(curl -s "https://api.github.com/repos/$REPO/releases/latest" | grep -Po '"tag_name": "\K.*?(?=")' || echo "latest")
 
 if [ -z "$LATEST_TAG" ]; then
     echo "Error: Failed to fetch latest release from GitHub."
@@ -42,17 +50,11 @@ fi
 
 echo "Resolved version: $LATEST_TAG"
 
-# Download archive (GoReleaser format: autocommiter.go_linux_amd64.tar.gz)
-DOWNLOAD_FILE="autocommiter.go_${OS}_${ARCH}.${ARCHIVE_EXTENSION}"
-DOWNLOAD_URL="$GITHUB_URL/releases/download/$LATEST_TAG/$DOWNLOAD_FILE"
+# Download binary
+DOWNLOAD_URL="$GITHUB_URL/releases/download/$LATEST_TAG/$BINARY_NAME"
 
-echo "Downloading $DOWNLOAD_FILE ($LATEST_TAG)..."
-TMP_DIR=$(mktemp -d)
-curl -fsSL "$DOWNLOAD_URL" -o "$TMP_DIR/$DOWNLOAD_FILE"
-
-# Extract
-cd "$TMP_DIR"
-tar -xzf "$DOWNLOAD_FILE"
+echo "Downloading $BINARY_NAME ($LATEST_TAG)..."
+curl -fsSL "$DOWNLOAD_URL" -o autocommiter
 
 # Install binary
 SUDO=""
@@ -74,9 +76,6 @@ $SUDO mv autocommiter "$INSTALL_DIR/autocommiter"
 $SUDO chmod +x "$INSTALL_DIR/autocommiter"
 
 echo "Successfully installed autocommiter to $INSTALL_DIR/autocommiter"
-
-# Cleanup
-rm -rf "$TMP_DIR"
 
 # Verify
 "$INSTALL_DIR/autocommiter" version || "$INSTALL_DIR/autocommiter" --help || true

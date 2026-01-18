@@ -11,10 +11,11 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  release:
+    name: Build and Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -24,7 +25,47 @@ jobs:
         with:
           go-version: '1.23'
           cache: true
-          cache-dependency-path: go.sum
+
+      - name: Build binaries
+        run: |
+          set -e
+          mkdir -p dist
+          
+          platforms=(
+            "linux/amd64"
+            "linux/arm64"
+            "darwin/amd64"
+            "darwin/arm64"
+            "windows/amd64"
+            "windows/arm64"
+            "android/arm64"
+          )
+
+          # Determine version
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="latest"
+          fi
+
+          COMMIT=${{ github.sha }}
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          for platform in "${platforms[@]}"; do
+            platform_split=(${platform//\// })
+            GOOS=${platform_split[0]}
+            GOARCH=${platform_split[1]}
+            
+            output_name="autocommiter-${GOOS}-${GOARCH}"
+            if [ "$GOOS" == "windows" ]; then
+              output_name+=".exe"
+            fi
+
+            echo "Building for $GOOS/$GOARCH..."
+            CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build \
+              -ldflags="-s -w -X main.version=$VERSION -X main.commit=$COMMIT -X main.date=$BUILD_DATE" \
+              -trimpath -o "dist/$output_name" ./cmd/autocommiter
+          done
 
       - name: Update rolling tag
         if: github.ref == 'refs/heads/master'
@@ -32,16 +73,18 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG_NAME='latest'
-          echo "Updating rolling tag: $TAG_NAME to ${{ github.sha }}"
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
           git tag -f "$TAG_NAME" ${{ github.sha }}
           git push -f origin "$TAG_NAME"
 
-      - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v6
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          distribution: goreleaser
-          version: latest
-          args: release --clean
+          files: dist/*
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          name: ${{ github.ref_type == 'tag' && github.ref_name || 'Latest Build' }}
+          generate_release_notes: true
+          draft: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
