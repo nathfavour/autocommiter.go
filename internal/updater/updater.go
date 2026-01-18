@@ -3,7 +3,9 @@ package updater
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"runtime"
 
 	"github.com/fatih/color"
@@ -27,8 +29,7 @@ func CheckForUpdates(currentVersion string) {
 
 	if latest != currentVersion && latest != "" {
 		color.Yellow("\n🔔 A new version is available: %s (current: %s)", latest, currentVersion)
-		color.Yellow("👉 Run the install script to update:")
-		color.Cyan("   curl -fsSL https://raw.githubusercontent.com/%s/master/install.sh | bash\n", repo)
+		color.Yellow("👉 Run 'autocommiter update' to upgrade instantly.\n")
 	}
 }
 
@@ -51,19 +52,14 @@ func getLatestTag() (string, error) {
 	return rel.TagName, nil
 }
 
-// SeamlessUpdate would download and replace the binary, but for now we'll suggest the install script
-// as it handles permissions and PATH better across platforms.
 func SeamlessUpdate(currentVersion string) error {
-	if currentVersion == "dev" {
-		return nil
-	}
-
 	latest, err := getLatestTag()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to check for updates: %w", err)
 	}
 
-	if latest == currentVersion {
+	if latest == currentVersion && currentVersion != "dev" {
+		color.Green("✓ autocommiter is already up to date (%s)", currentVersion)
 		return nil
 	}
 
@@ -73,18 +69,67 @@ func SeamlessUpdate(currentVersion string) error {
 	osName := runtime.GOOS
 	archName := runtime.GOARCH
 
-	// autocommiter.go_linux_amd64.tar.gz
-	archiveName := fmt.Sprintf("autocommiter.go_%s_%s.tar.gz", osName, archName)
-	if osName == "windows" {
-		archiveName = fmt.Sprintf("autocommiter.go_%s_%s.zip", osName, archName)
+	// Check for Android (Termux)
+	if osName == "linux" {
+		if _, err := os.Stat("/data/data/com.termux"); err == nil {
+			osName = "android"
+		}
 	}
 
-	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, latest, archiveName)
+	binaryName := fmt.Sprintf("autocommiter-%s-%s", osName, archName)
+	if osName == "windows" {
+		binaryName += ".exe"
+	}
 
-	color.Yellow("📥 Downloading from %s...", downloadURL)
+	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/%s/%s", repo, latest, binaryName)
 
-	// In a real implementation we would download, extract, and replace.
-	// For this CLI, suggesting the curl command is safer until we have a robust cross-platform self-update library integration.
+	color.Yellow("📥 Downloading binary...")
 
+	resp, err := http.Get(downloadURL)
+	if err != nil {
+		return fmt.Errorf("download failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to download binary: %s", resp.Status)
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("failed to get executable path: %w", err)
+	}
+
+	// Create a temporary file for the new binary
+	tmpPath := exe + ".tmp"
+	tmpFile, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(tmpPath)
+
+	_, err = io.Copy(tmpFile, resp.Body)
+	tmpFile.Close()
+	if err != nil {
+		return fmt.Errorf("failed to save binary: %w", err)
+	}
+
+	// Move current binary to a backup location
+	oldPath := exe + ".old"
+	if err := os.Rename(exe, oldPath); err != nil {
+		return fmt.Errorf("failed to backup current binary: %w", err)
+	}
+
+	// Move new binary to the original location
+	if err := os.Rename(tmpPath, exe); err != nil {
+		// Attempt to restore backup
+		os.Rename(oldPath, exe)
+		return fmt.Errorf("failed to install new binary: %w", err)
+	}
+
+	// Remove backup
+	os.Remove(oldPath)
+
+	color.Green("✨ Successfully updated to %s!", latest)
 	return nil
 }

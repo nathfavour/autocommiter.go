@@ -374,6 +374,15 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
+	var updateCmd = &cobra.Command{
+		Use:   "update",
+		Short: "Self-update autocommiter to the latest version",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return updater.SeamlessUpdate(version)
+		},
+	}
+	rootCmd.AddCommand(updateCmd)
+
 	var shouldClean bool
 	var uninstallCmd = &cobra.Command{
 		Use:   "uninstall",
