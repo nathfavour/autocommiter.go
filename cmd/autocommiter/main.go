@@ -441,6 +441,15 @@ func main() {
 	}
 	rootCmd.AddCommand(updateCmd)
 
+	var cleanCmd = &cobra.Command{
+		Use:   "clean",
+		Short: "Remove all application data and reset configuration",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return performClean()
+		},
+	}
+	rootCmd.AddCommand(cleanCmd)
+
 	var shouldClean bool
 	var uninstallCmd = &cobra.Command{
 		Use:   "uninstall",
@@ -457,6 +466,32 @@ func main() {
 	}
 }
 
+func performClean() error {
+	// Clean up application data directory
+	dataDir, _ := config.GetDataDir()
+	if dataDir != "" {
+		if _, err := os.Stat(dataDir); err == nil {
+			color.Cyan("🗑️ Removing application data directory: %s", dataDir)
+			err := os.RemoveAll(dataDir)
+			if err != nil {
+				return fmt.Errorf("failed to remove data directory: %w", err)
+			}
+		}
+	}
+
+	// Also clean up legacy files if they exist
+	home, _ := os.UserHomeDir()
+	if home != "" {
+		legacyConfig := filepath.Join(home, ".autocommiter.json")
+		legacyModels := filepath.Join(home, ".autocommiter.models.json")
+		_ = os.Remove(legacyConfig)
+		_ = os.Remove(legacyModels)
+	}
+
+	color.Green("✨ All application data and configuration have been cleared.")
+	return nil
+}
+
 func performUninstall(clean bool) error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -464,22 +499,8 @@ func performUninstall(clean bool) error {
 	}
 
 	if clean {
-		// Clean up application data directory
-		dataDir, _ := config.GetDataDir()
-		if dataDir != "" {
-			if _, err := os.Stat(dataDir); err == nil {
-				color.Cyan("🗑️ Removing application data directory: %s", dataDir)
-				os.RemoveAll(dataDir)
-			}
-		}
-
-		// Also clean up legacy files if they exist
-		home, _ := os.UserHomeDir()
-		if home != "" {
-			legacyConfig := filepath.Join(home, ".autocommiter.json")
-			legacyModels := filepath.Join(home, ".autocommiter.models.json")
-			_ = os.Remove(legacyConfig)
-			_ = os.Remove(legacyModels)
+		if err := performClean(); err != nil {
+			return err
 		}
 	}
 

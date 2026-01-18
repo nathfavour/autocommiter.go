@@ -31,10 +31,11 @@ curl -fsSL https://raw.githubusercontent.com/nathfavour/autocommiter.go/master/i
 - `autocommiter select-model` - Choose your favorite AI model
 - `autocommiter toggle-auto-update` - Keep it fresh
 
-### 🧹 Uninstallation
-
-- **Remove binary**: `autocommiter uninstall`
-- **Full wipe**: `autocommiter uninstall --clean`
+### 🧹 Maintenance
+- `autocommiter update`: Self-update to the latest version
+- `autocommiter clean`: Wipe all data and configuration
+- `autocommiter uninstall`: Remove binary
+- `autocommiter uninstall --clean`: Full wipe (binary + data)
 
 ---
 *Clean commits. Zero friction.*
