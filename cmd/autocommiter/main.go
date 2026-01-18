@@ -374,22 +374,15 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
+	var shouldClean bool
 	var uninstallCmd = &cobra.Command{
 		Use:   "uninstall",
 		Short: "Remove autocommiter binary",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return performUninstall(false)
+			return performUninstall(shouldClean)
 		},
 	}
-
-	var uninstallCleanCmd = &cobra.Command{
-		Use:   "clean",
-		Short: "Remove autocommiter binary and configuration",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return performUninstall(true)
-		},
-	}
-	uninstallCmd.AddCommand(uninstallCleanCmd)
+	uninstallCmd.Flags().BoolVar(&shouldClean, "clean", false, "Remove autocommiter binary and all configuration data")
 	rootCmd.AddCommand(uninstallCmd)
 
 	if err := rootCmd.Execute(); err != nil {

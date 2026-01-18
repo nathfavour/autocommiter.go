@@ -34,7 +34,7 @@ curl -fsSL https://raw.githubusercontent.com/nathfavour/autocommiter.go/master/i
 ### 🧹 Uninstallation
 
 - **Remove binary**: `autocommiter uninstall`
-- **Full wipe** (binary + config): `autocommiter uninstall clean`
+- **Full wipe**: `autocommiter uninstall --clean`
 
 ---
 *Clean commits. Zero friction.*
