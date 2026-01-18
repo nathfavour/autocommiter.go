@@ -1,6 +1,6 @@
 # Binaries
-autocommiter
-autocommiter.exe
+/autocommiter
+/autocommiter.exe
 *.exe
 *.exe~
 *.dll

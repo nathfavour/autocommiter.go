@@ -373,7 +373,53 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
+	var uninstallCmd = &cobra.Command{
+		Use:   "uninstall",
+		Short: "Remove autocommiter binary",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return performUninstall(false)
+		},
+	}
+
+	var uninstallCleanCmd = &cobra.Command{
+		Use:   "clean",
+		Short: "Remove autocommiter binary and configuration",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return performUninstall(true)
+		},
+	}
+	uninstallCmd.AddCommand(uninstallCleanCmd)
+	rootCmd.AddCommand(uninstallCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+}
+
+func performUninstall(clean bool) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not find executable path: %w", err)
+	}
+
+	if clean {
+		configFile, _ := config.GetConfigFile()
+		if configFile != "" {
+			if _, err := os.Stat(configFile); err == nil {
+				color.Cyan("🗑️ Removing configuration file: %s", configFile)
+				os.Remove(configFile)
+			}
+		}
+	}
+
+	color.Red("🧼 Uninstalling autocommiter...")
+	color.New(color.Faint).Printf("Removing binary at: %s\n", exe)
+
+	err = os.Remove(exe)
+	if err != nil {
+		return fmt.Errorf("failed to remove binary: %w (try running with sudo)", err)
+	}
+
+	color.Green("✨ autocommiter has been uninstalled.")
+	return nil
 }
