@@ -133,7 +133,7 @@ func GenerateMessage(repoRoot string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not generate commit message: no valid authentication found or AI generation failed")
+	return "", fmt.Errorf("authentication failed: please run 'gh auth login' or use 'autocommiter set-api-key'")
 }
 
 func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string, error) {
