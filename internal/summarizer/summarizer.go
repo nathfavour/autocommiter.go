@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/nathfavour/autocommiter-go/internal/git"
+	"github.com/nathfavour/autocommiter.go/internal/git"
 )
 
 type FileChange struct {

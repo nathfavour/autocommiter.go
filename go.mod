@@ -1,4 +1,4 @@
-module github.com/nathfavour/autocommiter-go
+module github.com/nathfavour/autocommiter.go
 
 go 1.25.5
 

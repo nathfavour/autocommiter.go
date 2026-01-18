@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/nathfavour/autocommiter-go/internal/auth"
-	"github.com/nathfavour/autocommiter-go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/auth"
+	"github.com/nathfavour/autocommiter.go/internal/config"
 )
 
 type ModelInfo struct {

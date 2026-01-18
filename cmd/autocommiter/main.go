@@ -9,11 +9,11 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/nathfavour/autocommiter-go/internal/auth"
-	"github.com/nathfavour/autocommiter-go/internal/config"
-	"github.com/nathfavour/autocommiter-go/internal/models"
-	"github.com/nathfavour/autocommiter-go/internal/processor"
-	"github.com/nathfavour/autocommiter-go/internal/updater"
+	"github.com/nathfavour/autocommiter.go/internal/auth"
+	"github.com/nathfavour/autocommiter.go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/models"
+	"github.com/nathfavour/autocommiter.go/internal/processor"
+	"github.com/nathfavour/autocommiter.go/internal/updater"
 	"github.com/spf13/cobra"
 )
 

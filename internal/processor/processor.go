@@ -8,12 +8,12 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
-	"github.com/nathfavour/autocommiter-go/internal/api"
-	"github.com/nathfavour/autocommiter-go/internal/auth"
-	"github.com/nathfavour/autocommiter-go/internal/config"
-	"github.com/nathfavour/autocommiter-go/internal/git"
-	"github.com/nathfavour/autocommiter-go/internal/gitmoji"
-	"github.com/nathfavour/autocommiter-go/internal/summarizer"
+	"github.com/nathfavour/autocommiter.go/internal/api"
+	"github.com/nathfavour/autocommiter.go/internal/auth"
+	"github.com/nathfavour/autocommiter.go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/git"
+	"github.com/nathfavour/autocommiter.go/internal/gitmoji"
+	"github.com/nathfavour/autocommiter.go/internal/summarizer"
 )
 
 func GenerateCommit(repoPath string, noPush bool, force bool) error {

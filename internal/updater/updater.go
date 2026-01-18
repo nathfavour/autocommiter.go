@@ -10,7 +10,7 @@ import (
 	"runtime"
 
 	"github.com/fatih/color"
-	"github.com/nathfavour/autocommiter-go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/config"
 )
 
 const repo = "nathfavour/autocommiter.go"
@@ -64,7 +64,7 @@ func SeamlessUpdate(currentVersion string) error {
 	if buildFromSource {
 		color.Cyan("🛠️  Build From Source mode enabled.")
 		color.Yellow("📥 Updating via 'go install'...")
-		cmd := exec.Command("go", "install", "github.com/nathfavour/autocommiter-go/cmd/autocommiter@latest")
+		cmd := exec.Command("go", "install", "github.com/nathfavour/autocommiter.go/cmd/autocommiter@latest")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
