@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
+
+	"github.com/nathfavour/autocommiter-go/internal/config"
 )
 
 type ModelInfo struct {
@@ -116,11 +117,7 @@ func FetchAvailableModels(apiKey string) ([]ModelInfo, error) {
 }
 
 func GetModelsCacheFile() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("could not determine home directory: %w", err)
-	}
-	return filepath.Join(home, ".autocommiter.models.json"), nil
+	return config.GetModelsCacheFile()
 }
 
 func GetCachedModels() ([]ModelInfo, error) {

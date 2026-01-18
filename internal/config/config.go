@@ -36,12 +36,32 @@ func DefaultConfig() Config {
 	}
 }
 
-func GetConfigFile() (string, error) {
+func GetDataDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("could not determine home directory: %w", err)
 	}
-	return filepath.Join(home, ".autocommiter.json"), nil
+	dir := filepath.Join(home, ".autocommiter")
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		_ = os.MkdirAll(dir, 0755)
+	}
+	return dir, nil
+}
+
+func GetConfigFile() (string, error) {
+	dir, err := GetDataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "config.json"), nil
+}
+
+func GetModelsCacheFile() (string, error) {
+	dir, err := GetDataDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "models.json"), nil
 }
 
 func LoadConfig() (Config, error) {

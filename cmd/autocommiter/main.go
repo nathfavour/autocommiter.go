@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -403,12 +404,22 @@ func performUninstall(clean bool) error {
 	}
 
 	if clean {
-		configFile, _ := config.GetConfigFile()
-		if configFile != "" {
-			if _, err := os.Stat(configFile); err == nil {
-				color.Cyan("🗑️ Removing configuration file: %s", configFile)
-				os.Remove(configFile)
+		// Clean up application data directory
+		dataDir, _ := config.GetDataDir()
+		if dataDir != "" {
+			if _, err := os.Stat(dataDir); err == nil {
+				color.Cyan("🗑️ Removing application data directory: %s", dataDir)
+				os.RemoveAll(dataDir)
 			}
+		}
+
+		// Also clean up legacy files if they exist
+		home, _ := os.UserHomeDir()
+		if home != "" {
+			legacyConfig := filepath.Join(home, ".autocommiter.json")
+			legacyModels := filepath.Join(home, ".autocommiter.models.json")
+			_ = os.Remove(legacyConfig)
+			_ = os.Remove(legacyModels)
 		}
 	}
 
