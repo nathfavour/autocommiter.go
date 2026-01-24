@@ -6,15 +6,22 @@ Built with native Go for speed, portability, and zero-config vibe.
 
 ---
 
-### 🚀 Quick Install
+## 🚀 Installation
 
-Install the latest binary for your platform (Linux, macOS, Windows, Android/Termux):
-
+### Quick Install (Recommended)
 ```bash
 curl -fsSL https://raw.githubusercontent.com/nathfavour/autocommiter.go/master/install.sh | bash
 ```
 
-### 🛠️ Getting Started
+### Building from Source
+Requires **Go 1.21** or later.
+```bash
+git clone https://github.com/nathfavour/autocommiter.go.git
+cd autocommiter.go
+go build -o autocommiter ./cmd/autocommiter
+```
+
+## 🛠️ Setup
 
 1. **Set your API Key** (GitHub Models API):
    ```bash
