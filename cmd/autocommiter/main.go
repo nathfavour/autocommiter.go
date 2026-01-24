@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -29,6 +30,21 @@ var (
 )
 
 func main() {
+	// Try to populate version info from build info if not set by ldflags
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if version == "v0.0.0-dev" && info.Main.Version != "" && info.Main.Version != "(devel)" {
+			version = info.Main.Version
+		}
+		for _, setting := range info.Settings {
+			if commit == "unknown" && setting.Key == "vcs.revision" {
+				commit = setting.Value
+			}
+			if date == "2026-01" && setting.Key == "vcs.time" {
+				date = setting.Value
+			}
+		}
+	}
+
 	cfg, _ := config.LoadConfig()
 	if cfg.AutoUpdate != nil && *cfg.AutoUpdate {
 		updater.CheckForUpdates(version)
