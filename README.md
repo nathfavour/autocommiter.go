@@ -15,6 +15,13 @@ curl -fsSL https://raw.githubusercontent.com/nathfavour/autocommiter.go/master/i
 
 ### Building from Source
 Requires **Go 1.21** or later.
+
+**Via go install:**
+```bash
+go install github.com/nathfavour/autocommiter.go/cmd/autocommiter@latest
+```
+
+**Via manual build:**
 ```bash
 git clone https://github.com/nathfavour/autocommiter.go.git
 cd autocommiter.go
