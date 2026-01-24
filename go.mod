@@ -3,7 +3,7 @@ module github.com/nathfavour/autocommiter.go
 go 1.25.0
 
 require (
-	github.com/cli/go-gh/v2 v2.13.0
+	github.com/cli/go-gh/v2 v2.11.0
 	github.com/fatih/color v1.18.0
 	github.com/spf13/cobra v1.10.2
 )
