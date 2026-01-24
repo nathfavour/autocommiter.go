@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/nathfavour/autocommiter.go/internal/config"
