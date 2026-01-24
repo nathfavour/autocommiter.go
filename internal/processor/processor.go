@@ -52,24 +52,31 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		return err
 	}
 
-	// Stage changes
-	color.Cyan("📦 Staging changes...")
-	if err := git.StageAllChanges(repoRoot); err != nil {
-		return err
-	}
-
-	// Check for staged files
-	color.Cyan("📋 Checking staged changes...")
+	// Check for staged files first
 	stagedFiles, err := git.GetStagedFiles(repoRoot)
 	if err != nil {
 		return err
 	}
+
+	if len(stagedFiles) == 0 {
+		// Stage changes only if nothing is staged
+		color.Cyan("📦 No changes staged. Staging all changes...")
+		if err := git.StageAllChanges(repoRoot); err != nil {
+			return err
+		}
+		
+		stagedFiles, err = git.GetStagedFiles(repoRoot)
+		if err != nil {
+			return err
+		}
+	} else {
+		color.Green("✓ Using %d already staged files", len(stagedFiles))
+	}
+
 	if len(stagedFiles) == 0 {
 		color.Yellow("ℹ️ No changes to commit — Autocommit skipped.\n")
 		return nil
 	}
-
-	color.Green("✓ Found %d files", len(stagedFiles))
 	for _, file := range stagedFiles {
 		color.New(color.Faint).Printf("  - %s\n", file)
 	}
@@ -82,7 +89,7 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("💬 Message: %s", color.New(color.Italic).Sprint(message))
 
 	// Ask for confirmation
-	cfg, _ := config.LoadConfig()
+	cfg, _ := config.LoadMergedConfig(repoRoot)
 	skipConf := false
 	if cfg.SkipConfirmation != nil {
 		skipConf = *cfg.SkipConfirmation
@@ -119,7 +126,7 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 }
 
 func GenerateMessage(repoRoot string) (string, error) {
-	cfg, _ := config.LoadConfig()
+	cfg, _ := config.LoadMergedConfig(repoRoot)
 
 	apiKey := ""
 	if cfg.APIKey != nil {
@@ -181,7 +188,7 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 }
 
 func EnsureGitignoreSafety(repoRoot string) error {
-	cfg, _ := config.LoadConfig()
+	cfg, _ := config.LoadMergedConfig(repoRoot)
 	shouldUpdate := false
 	if cfg.UpdateGitignore != nil {
 		shouldUpdate = *cfg.UpdateGitignore

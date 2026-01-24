@@ -31,6 +31,15 @@ curl -fsSL https://raw.githubusercontent.com/nathfavour/autocommiter.go/master/i
 - `autocommiter select-model` - Choose your favorite AI model
 - `autocommiter toggle-auto-update` - Keep it fresh
 
+#### 📁 Project-level Config
+You can also create a `.autocommiter.json` in your repository root to override global settings for a specific project:
+```json
+{
+  "selected_model": "gpt-4o",
+  "enable_gitmoji": true
+}
+```
+
 ### 🧹 Maintenance
 - `autocommiter update`: Self-update to the latest version
 - `autocommiter clean`: Wipe all data and configuration

@@ -3,8 +3,8 @@ package summarizer
 import (
 	"encoding/json"
 	"fmt"
-	"regexp"
-	"strings"
+	"sort"
+	"sync"
 
 	"github.com/nathfavour/autocommiter.go/internal/git"
 )
@@ -49,10 +49,27 @@ func BuildFileChanges(cwd string) ([]FileChange, error) {
 	}
 
 	var changes []FileChange
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
 	for _, file := range files {
-		change, _ := AnalyzeFileChange(cwd, file)
-		changes = append(changes, FileChange{File: file, Change: change})
+		wg.Add(1)
+		go func(f string) {
+			defer wg.Done()
+			change, _ := AnalyzeFileChange(cwd, f)
+			
+			mu.Lock()
+			changes = append(changes, FileChange{File: f, Change: change})
+			mu.Unlock()
+		}(file)
 	}
+
+	wg.Wait()
+
+	// Sort changes by file name to maintain consistency
+	sort.Slice(changes, func(i, j int) bool {
+		return changes[i].File < changes[j].File
+	})
 
 	return changes, nil
 }

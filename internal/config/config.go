@@ -74,18 +74,12 @@ func LoadConfig() (Config, error) {
 		return DefaultConfig(), err
 	}
 
-	if _, err := os.Stat(configFile); os.IsNotExist(err) {
-		return DefaultConfig(), nil
-	}
-
-	content, err := os.ReadFile(configFile)
-	if err != nil {
-		return DefaultConfig(), err
-	}
-
-	var config Config
-	if err := json.Unmarshal(content, &config); err != nil {
-		return DefaultConfig(), nil
+	cfg := DefaultConfig()
+	if _, err := os.Stat(configFile); err == nil {
+		content, err := os.ReadFile(configFile)
+		if err == nil {
+			_ = json.Unmarshal(content, &cfg)
+		}
 	}
 
 	// Opinionated Detection: If both go and git are installed, this is a developer environment.
@@ -93,14 +87,65 @@ func LoadConfig() (Config, error) {
 	_, errGit := exec.LookPath("git")
 	if errGo == nil && errGit == nil {
 		// Automatically enable build from source if not already set
-		if config.BuildFromSource == nil || !*config.BuildFromSource {
+		if cfg.BuildFromSource == nil || !*cfg.BuildFromSource {
 			val := true
-			config.BuildFromSource = &val
-			_ = SaveConfig(config)
+			cfg.BuildFromSource = &val
+			_ = SaveConfig(cfg)
 		}
 	}
 
-	return config, nil
+	return cfg, nil
+}
+
+func LoadMergedConfig(repoRoot string) (Config, error) {
+	cfg, err := LoadConfig()
+	if err != nil {
+		return cfg, err
+	}
+
+	if repoRoot == "" {
+		return cfg, nil
+	}
+
+	repoConfigPath := filepath.Join(repoRoot, ".autocommiter.json")
+	if _, err := os.Stat(repoConfigPath); err == nil {
+		content, err := os.ReadFile(repoConfigPath)
+		if err == nil {
+			var repoCfg Config
+			if err := json.Unmarshal(content, &repoCfg); err == nil {
+				mergeConfigs(&cfg, repoCfg)
+			}
+		}
+	}
+
+	return cfg, nil
+}
+
+func mergeConfigs(base *Config, override Config) {
+	if override.APIKey != nil {
+		base.APIKey = override.APIKey
+	}
+	if override.SelectedModel != nil {
+		base.SelectedModel = override.SelectedModel
+	}
+	if override.EnableGitmoji != nil {
+		base.EnableGitmoji = override.EnableGitmoji
+	}
+	if override.UpdateGitignore != nil {
+		base.UpdateGitignore = override.UpdateGitignore
+	}
+	if override.SkipConfirmation != nil {
+		base.SkipConfirmation = override.SkipConfirmation
+	}
+	if override.AutoUpdate != nil {
+		base.AutoUpdate = override.AutoUpdate
+	}
+	if override.BuildFromSource != nil {
+		base.BuildFromSource = override.BuildFromSource
+	}
+	if len(override.GitignorePatterns) > 0 {
+		base.GitignorePatterns = override.GitignorePatterns
+	}
 }
 
 func SaveConfig(config Config) error {
