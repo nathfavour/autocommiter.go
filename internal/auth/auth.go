@@ -4,7 +4,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/cli/go-gh/v2/pkg/auth"
+	ghauth "github.com/cli/go-gh/v2/pkg/auth"
 )
 
 // GetToken checks if an API key is provided, if not it tries to get one from gh CLI.
@@ -14,7 +14,7 @@ func GetToken(configuredKey string) string {
 	}
 
 	// Try getting token from gh CLI
-	token, _ := auth.TokenForHost("github.com")
+	token, _ := ghauth.TokenForHost("github.com")
 	return token
 }
 

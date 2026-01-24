@@ -134,13 +134,11 @@ func GenerateMessage(repoRoot string) (string, error) {
 	}
 
 	token := auth.GetToken(apiKey)
-	if token != "" {
-		if message, err := TryAPIGeneration(repoRoot, token, cfg); err == nil {
-			return message, nil
-		}
+	if token == "" {
+		return "", fmt.Errorf("authentication failed: please run 'gh auth login' or use 'autocommiter set-api-key'")
 	}
 
-	return "", fmt.Errorf("authentication failed: please run 'gh auth login' or use 'autocommiter set-api-key'")
+	return TryAPIGeneration(repoRoot, token, cfg)
 }
 
 func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string, error) {
