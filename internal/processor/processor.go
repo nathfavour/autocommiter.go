@@ -145,6 +145,7 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 	color.New(color.FgCyan).Fprint(os.Stderr, "🤖 Generating with model: ")
 	color.New(color.FgCyan, color.Faint).Fprintln(os.Stderr, model, "...")
 
+	branch, _ := git.GetCurrentBranch(repoRoot)
 	fileChanges, err := summarizer.BuildFileChanges(repoRoot)
 	if err != nil {
 		return "", err
@@ -152,15 +153,17 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 
 	var fileNamesList []string
 	for i, fc := range fileChanges {
-		if i >= 50 {
+		if i >= 100 { // Increased from 50
 			break
 		}
 		fileNamesList = append(fileNamesList, fc.File)
 	}
 	fileNames := strings.Join(fileNamesList, "\n")
-	compressedJSON := summarizer.CompressToJSON(fileChanges, 400)
+	
+	// Increased limit from 400 to 12000 to give the LLM much more context
+	compressedJSON := summarizer.CompressToJSON(fileChanges, 12000)
 
-	message, err := api.GenerateCommitMessage(apiKey, fileNames, compressedJSON, model)
+	message, err := api.GenerateCommitMessage(apiKey, branch, fileNames, compressedJSON, model)
 	if err != nil {
 		return "", err
 	}

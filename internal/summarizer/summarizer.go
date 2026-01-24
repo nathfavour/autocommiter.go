@@ -19,49 +19,27 @@ type FileChangesResponse struct {
 }
 
 func AnalyzeFileChange(cwd string, file string) (string, error) {
-	diff, err := git.GetStagedDiffNumstat(cwd, file)
+	// First, get the diff with context
+	diff, err := git.GetStagedDiff(cwd, file)
 	if err == nil && diff != "" {
-		lines := strings.Split(diff, "\n")
-		if len(lines) > 0 {
-			parts := strings.Split(lines[0], "\t")
-			if len(parts) >= 3 {
-				added := parts[0]
-				if added == "-" {
-					added = "0"
-				}
-				removed := parts[1]
-				if removed == "-" {
-					removed = "0"
-				}
-				return fmt.Sprintf("%s+/%s−", added, removed), nil
-			}
+		// If the diff is small enough, return it all
+		if len(diff) < 2000 {
+			return diff, nil
 		}
-		return "mod", nil
+
+		// Otherwise, get a summary of what changed
+		numstat, _ := git.GetStagedDiffNumstat(cwd, file)
+		return fmt.Sprintf("Large diff: %s\nFull diff omitted but here is the start:\n%s", numstat, truncateDiff(diff, 1000)), nil
 	}
 
-	hunks, err := git.GetStagedDiffUnified(cwd, file)
-	if err == nil {
-		lines := strings.Split(hunks, "\n")
-		var first string
-		for _, line := range lines {
-			trimmed := strings.TrimSpace(line)
-			if trimmed != "" {
-				first = trimmed
-				break
-			}
-		}
-		if first == "" {
-			first = "mod"
-		}
-		if len(first) > 40 {
-			first = first[:40]
-		}
-		re := regexp.MustCompile(`\s+`)
-		collapsed := re.ReplaceAllString(first, " ")
-		return collapsed, nil
-	}
+	return "mod", nil
+}
 
-	return "err", nil
+func truncateDiff(diff string, maxLen int) string {
+	if len(diff) <= maxLen {
+		return diff
+	}
+	return diff[:maxLen] + "\n... (truncated)"
 }
 
 func BuildFileChanges(cwd string) ([]FileChange, error) {
@@ -84,12 +62,16 @@ func CompressToJSON(fileChanges []FileChange, maxLen int) string {
 		return `{"files":[]}`
 	}
 
+	// We'll try to fit as much as possible, prioritizing file names
+	// Modern LLMs can handle much more than 400 chars. 
+	// The caller should pass a larger maxLen (e.g., 10000)
+
 	serialize := func(arr []FileChange, truncateLen int) string {
 		var mapped []FileChange
 		for _, fc := range arr {
 			change := fc.Change
 			if truncateLen > 0 && len(change) > truncateLen {
-				change = change[:truncateLen]
+				change = change[:truncateLen] + "\n..."
 			}
 			mapped = append(mapped, FileChange{File: fc.File, Change: change})
 		}
@@ -98,7 +80,8 @@ func CompressToJSON(fileChanges []FileChange, maxLen int) string {
 		return string(b)
 	}
 
-	truncateLens := []int{-1, 12, 6, 3, 1}
+	// Dynamic truncation levels
+	truncateLens := []int{-1, 2000, 1000, 500, 200, 100, 50}
 
 	for _, tLen := range truncateLens {
 		for keep := len(fileChanges); keep >= 1; keep-- {
@@ -109,11 +92,6 @@ func CompressToJSON(fileChanges []FileChange, maxLen int) string {
 		}
 	}
 
-	// Fallback
-	fileName := fileChanges[0].File
-	parts := strings.Split(fileName, "/")
-	fileName = parts[len(parts)-1]
-	minimal := []FileChange{{File: fileName, Change: "mod"}}
-	b, _ := json.Marshal(FileChangesResponse{Files: minimal})
-	return string(b)
+	// Ultimate fallback
+	return `{"files":[{"f":"multiple files","c":"too large to summarize"}]}`
 }

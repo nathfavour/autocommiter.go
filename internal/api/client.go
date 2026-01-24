@@ -27,14 +27,34 @@ type ChatCompletionResponse struct {
 	} `json:"choices"`
 }
 
-func CallInferenceAPI(apiKey, prompt, model string) (string, error) {
+const SystemPrompt = `You are an expert software engineer specializing in high-quality git commit messages.
+Your task is to generate a concise, professional, and descriptive commit message based on the provided diffs and file changes.
+
+Follow these rules:
+1. Format: Use the Conventional Commits specification (e.g., feat: ..., fix: ..., docs: ..., refactor: ..., chore: ..., style: ..., test: ...).
+2. Subject Line:
+   - Must be under 50 characters if possible, never exceeding 72.
+   - Use the imperative mood (e.g., "add", not "added" or "adds").
+   - Do not end with a period.
+3. Body (Optional):
+   - Only include a body if the changes are complex and require explanation.
+   - Separate the subject from the body with a blank line.
+   - Explain 'what' and 'why', not 'how'.
+4. Specificity: Be specific. Instead of "update files", say "refactor auth logic in client.go".
+5. Output: Return ONLY the commit message text. No markdown, no "Commit message:", no quotes.
+
+Context:
+- Current branch: %s
+`
+
+func CallInferenceAPI(apiKey, branch, prompt, model string) (string, error) {
 	url := "https://models.inference.ai.azure.com/chat/completions"
 
 	request := ChatCompletionRequest{
 		Messages: []Message{
 			{
 				Role:    "system",
-				Content: "You are a helpful assistant that generates concise, informative git commit messages. Reply only with the commit message, nothing else.",
+				Content: fmt.Sprintf(SystemPrompt, branch),
 			},
 			{
 				Role:    "user",
@@ -81,11 +101,11 @@ func CallInferenceAPI(apiKey, prompt, model string) (string, error) {
 	return "", fmt.Errorf("unexpected API response format")
 }
 
-func GenerateCommitMessage(apiKey, fileNames, compressedJSON, model string) (string, error) {
+func GenerateCommitMessage(apiKey, branch, fileNames, compressedJSON, model string) (string, error) {
 	prompt := fmt.Sprintf(
-		"reply only with a very concise but informative commit message, and nothing else:\n\nFiles:\n%s\n\nSummaryJSON:%s",
+		"Generate a commit message for the following changes:\n\nFiles changed:\n%s\n\nDetailed changes (JSON):\n%s",
 		fileNames, compressedJSON,
 	)
 
-	return CallInferenceAPI(apiKey, prompt, model)
+	return CallInferenceAPI(apiKey, branch, prompt, model)
 }
