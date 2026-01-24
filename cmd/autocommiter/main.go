@@ -23,9 +23,9 @@ var (
 	force    bool
 
 	// Version metadata (injected by GoReleaser)
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	version = "v0.0.0-dev"
+	commit  = "unknown"
+	date    = "2026-01"
 )
 
 func main() {
@@ -425,9 +425,9 @@ func main() {
 		Use:   "version",
 		Short: "Print the version number of autocommiter",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("autocommiter version %s\n", version)
-			fmt.Printf("commit: %s\n", commit)
-			fmt.Printf("build date: %s\n", date)
+			color.Cyan("autocommiter %s", version)
+			fmt.Printf("Commit: %s\n", commit)
+			fmt.Printf("Build Date: %s\n", date)
 		},
 	}
 	rootCmd.AddCommand(versionCmd)

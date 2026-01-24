@@ -20,7 +20,7 @@ type release struct {
 }
 
 func CheckForUpdates(currentVersion string) {
-	if currentVersion == "dev" {
+	if currentVersion == "v0.0.0-dev" || currentVersion == "dev" {
 		return
 	}
 
@@ -79,7 +79,7 @@ func SeamlessUpdate(currentVersion string) error {
 		return fmt.Errorf("failed to check for updates: %w", err)
 	}
 
-	if latest == currentVersion && currentVersion != "dev" {
+	if latest == currentVersion && currentVersion != "v0.0.0-dev" && currentVersion != "dev" {
 		color.Green("✓ autocommiter is already up to date (%s)", currentVersion)
 		return nil
 	}
