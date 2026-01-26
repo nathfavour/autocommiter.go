@@ -10,21 +10,32 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/nathfavour/autocommiter.go/internal/config"
 )
 
 const repo = "nathfavour/autocommiter.go"
+const updateThrottle = 4 * time.Hour // Check GitHub at most every 4 hours
 
 type release struct {
 	TagName string `json:"tag_name"`
 }
 
 func CheckForUpdates(currentVersion string) {
+	cfg, _ := config.LoadConfig()
+	
+	// If we've checked recently, use the cached result to notify
+	if cfg.LastUpdateCheck > 0 && time.Since(time.Unix(cfg.LastUpdateCheck, 0)) < updateThrottle {
+		if cfg.LatestVersionFound != "" && isNewer(cfg.LatestVersionFound, currentVersion) {
+			color.Yellow("\n🔔 A new version is available: %s (current: %s)", cfg.LatestVersionFound, currentVersion)
+			color.Yellow("👉 It will be automatically installed after this task completes.\n")
+		}
+		return
+	}
+
 	if currentVersion == "dev" || currentVersion == "" {
-		// Even in dev, we might want to check if BuildFromSource is enabled
-		cfg, _ := config.LoadConfig()
 		if cfg.BuildFromSource == nil || !*cfg.BuildFromSource {
 			return
 		}
@@ -35,6 +46,11 @@ func CheckForUpdates(currentVersion string) {
 		return
 	}
 
+	// Update the cache
+	cfg.LastUpdateCheck = time.Now().Unix()
+	cfg.LatestVersionFound = latest
+	_ = config.SaveConfig(cfg)
+
 	if isNewer(latest, currentVersion) {
 		color.Yellow("\n🔔 A new version is available: %s (current: %s)", latest, currentVersion)
 		color.Yellow("👉 It will be automatically installed after this task completes.\n")
@@ -43,29 +59,21 @@ func CheckForUpdates(currentVersion string) {
 
 func AutoUpdate(currentVersion string) {
 	cfg, _ := config.LoadConfig()
-	buildFromSource := false
-	if cfg.BuildFromSource != nil {
-		buildFromSource = *cfg.BuildFromSource
-	}
-
-	if currentVersion == "dev" || currentVersion == "" {
-		if !buildFromSource {
-			return
-		}
-	}
-
-	latest, err := getLatestTag()
-	if err != nil {
+	
+	// We only update if we have a version in the cache that is newer
+	if cfg.LatestVersionFound == "" || !isNewer(cfg.LatestVersionFound, currentVersion) {
 		return
 	}
 
-	if isNewer(latest, currentVersion) || (latest == "latest" && buildFromSource) {
-		color.Cyan("\n🚀 New version %s detected. Performing automatic update...", latest)
-		if err := SeamlessUpdate(currentVersion); err != nil {
-			color.Red("❌ Automatic update failed: %v", err)
-		} else {
-			color.Green("✅ Successfully updated to %s!", latest)
-		}
+	latest := cfg.LatestVersionFound
+	color.Cyan("\n🚀 New version %s detected. Performing automatic update...", latest)
+	if err := SeamlessUpdate(currentVersion); err != nil {
+		color.Red("❌ Automatic update failed: %v", err)
+	} else {
+		// After a successful update, we clear the "latest version found" so we don't 
+		// keep trying to update to the same thing in a loop if the version string didn't change.
+		cfg.LatestVersionFound = ""
+		_ = config.SaveConfig(cfg)
 	}
 }
 
@@ -100,13 +108,25 @@ func getLatestTag() (string, error) {
 }
 
 func isNewer(latest, current string) bool {
-	if latest == "" || latest == "latest" {
-		return latest != current
+	if latest == "" || latest == current {
+		return false
 	}
+	
+	// If latest is a rolling tag, we only update if we aren't already on "dev" 
+	// or if we have specialized logic. For now, assume "latest" is always newer 
+	// than a semantic version, but avoid loops.
+	if latest == "latest" {
+		// If current is dev, it's hard to tell if latest is newer without commit hashes.
+		// We'll rely on the throttle to prevent blind loops.
+		return current != "latest"
+	}
+
 	if current == "dev" || current == "" {
 		return true
 	}
-	// Simple string comparison for now, can be improved with semver
+
+	// Basic string comparison (v0.1.1 != v0.1.0)
+	// For production, a semver library would be better.
 	return latest != current
 }
 

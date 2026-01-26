@@ -16,6 +16,8 @@ type Config struct {
 	SkipConfirmation  *bool    `json:"skip_confirmation"`
 	AutoUpdate        *bool    `json:"auto_update"`
 	BuildFromSource   *bool    `json:"build_from_source"`
+	LastUpdateCheck   int64    `json:"last_update_check"`
+	LatestVersionFound string  `json:"latest_version_found"`
 	GitignorePatterns []string `json:"gitignore_patterns"`
 }
 
@@ -36,6 +38,8 @@ func DefaultConfig() Config {
 		SkipConfirmation:  &skipConfirmation,
 		AutoUpdate:        &autoUpdate,
 		BuildFromSource:   &buildFromSource,
+		LastUpdateCheck:   0,
+		LatestVersionFound: "",
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
 	}
 }
