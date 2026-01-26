@@ -32,12 +32,28 @@ func CheckForUpdates(currentVersion string) {
 	}
 
 	if latest != currentVersion && latest != "" {
-		if latest == "latest" && (currentVersion == "v0.0.0-dev" || currentVersion == "dev") {
-			// Don't bother if we are already in a dev state and latest is just 'latest'
-			// but wait, if it's a dev build, we might want to update anyway.
-		}
 		color.Yellow("\n🔔 A new version is available: %s (current: %s)", latest, currentVersion)
-		color.Yellow("👉 Run 'autocommiter update' to upgrade instantly.\n")
+		color.Yellow("👉 It will be automatically installed after this task completes.\n")
+	}
+}
+
+func AutoUpdate(currentVersion string) {
+	if currentVersion == "v0.0.0-dev" || currentVersion == "dev" {
+		return
+	}
+
+	latest, err := getLatestTag()
+	if err != nil {
+		return
+	}
+
+	if latest != currentVersion && latest != "" {
+		color.Cyan("\n🚀 New version %s detected. Performing automatic update...", latest)
+		if err := SeamlessUpdate(currentVersion); err != nil {
+			color.Red("❌ Automatic update failed: %v", err)
+		} else {
+			color.Green("✅ Successfully updated to %s!", latest)
+		}
 	}
 }
 

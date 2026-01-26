@@ -539,6 +539,11 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
+
+	// Automatic update after command execution
+	if cfg.AutoUpdate != nil && *cfg.AutoUpdate {
+		updater.AutoUpdate(version)
+	}
 }
 
 func performClean() error {
