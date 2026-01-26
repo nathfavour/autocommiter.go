@@ -73,14 +73,41 @@ func SeamlessUpdate(currentVersion string) error {
 
 	if buildFromSource {
 		color.Cyan("🛠️  Build From Source mode enabled.")
-		color.Yellow("📥 Updating via 'go install'...")
-		cmd := exec.Command("go", "install", "github.com/nathfavour/autocommiter.go/cmd/autocommiter@latest")
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to build from source: %w", err)
+		color.Yellow("📥 Updating via 'go build' to ensure installation in ~/.local/bin...")
+
+		// Ensure primary directory exists
+		if err := os.MkdirAll(primaryDir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", primaryDir, err)
 		}
-		color.Green("✨ Successfully built and installed latest version from source!")
+
+		// Download source or use temporary directory to clone and build
+		// For simplicity and to avoid 'go install' putting it in GOBIN,
+		// we clone to a temp dir and build directly to the target path.
+		tmpDir, err := os.MkdirTemp("", "autocommiter-build-*")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(tmpDir)
+
+		color.Cyan("📂 Cloning latest source...")
+		cloneCmd := exec.Command("git", "clone", "--depth", "1", "https://github.com/"+repo+".git", tmpDir)
+		if err := cloneCmd.Run(); err != nil {
+			return fmt.Errorf("failed to clone source: %w", err)
+		}
+
+		color.Cyan("🔨 Building binary...")
+		buildCmd := exec.Command("go", "build", "-o", primaryPath, "./cmd/autocommiter")
+		buildCmd.Dir = tmpDir
+		buildCmd.Stdout = os.Stdout
+		buildCmd.Stderr = os.Stderr
+		if err := buildCmd.Run(); err != nil {
+			return fmt.Errorf("failed to build: %w", err)
+		}
+
+		// Conflict Cleanup Logic (even in source build)
+		cleanupConflicts(primaryPath)
+
+		color.Green("✨ Successfully built and installed latest version to %s!", primaryPath)
 		return nil
 	}
 
@@ -102,26 +129,7 @@ func SeamlessUpdate(currentVersion string) error {
 	}
 
 	// Conflict Cleanup Logic using 'which -a'
-	color.Cyan("🔍 Checking for conflicting binaries...")
-	cmdWhich := exec.Command("which", "-a", "autocommiter")
-	output, _ := cmdWhich.Output()
-	foundPaths := strings.Split(strings.TrimSpace(string(output)), "\n")
-
-	for _, p := range foundPaths {
-		if p == "" {
-			continue
-		}
-		absP, _ := filepath.Abs(p)
-		if absP == primaryPath {
-			continue
-		}
-		
-		// If it's not our primary path, it's a conflict
-		if info, err := os.Stat(absP); err == nil && !info.IsDir() {
-			color.Yellow("🗑️  Removing conflicting binary at: %s", absP)
-			_ = os.Remove(absP)
-		}
-	}
+	cleanupConflicts(primaryPath)
 
 	// Determine binary name based on OS/Arch
 	osName := runtime.GOOS
@@ -187,4 +195,38 @@ func SeamlessUpdate(currentVersion string) error {
 	color.Green("✨ Successfully installed to %s", primaryPath)
 	color.Green("✓ Updated to %s!", latest)
 	return nil
+}
+
+func cleanupConflicts(primaryPath string) {
+	color.Cyan("🔍 Checking for conflicting binaries...")
+	cmdWhich := exec.Command("which", "-a", "autocommiter")
+	output, _ := cmdWhich.Output()
+	foundPaths := strings.Split(strings.TrimSpace(string(output)), "\n")
+
+	for _, p := range foundPaths {
+		if p == "" {
+			continue
+		}
+		absP, _ := filepath.Abs(p)
+		
+		// If it's a symlink, resolve it to find the real binary
+		realPath, err := filepath.EvalSymlinks(absP)
+		if err == nil {
+			absP = realPath
+		}
+
+		if absP == primaryPath {
+			continue
+		}
+
+		// If it's not our primary path, it's a conflict
+		if info, err := os.Stat(absP); err == nil && !info.IsDir() {
+			// Check if we have permission to remove it
+			color.Yellow("🗑️  Removing conflicting binary at: %s", absP)
+			err := os.Remove(absP)
+			if err != nil {
+				color.Red("⚠️  Could not remove %s: %v (You may need to remove it manually)", absP, err)
+			}
+		}
+	}
 }

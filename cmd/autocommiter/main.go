@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/nathfavour/autocommiter.go/internal/auth"
 	"github.com/nathfavour/autocommiter.go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/git"
 	"github.com/nathfavour/autocommiter.go/internal/models"
 	"github.com/nathfavour/autocommiter.go/internal/processor"
 	"github.com/nathfavour/autocommiter.go/internal/updater"
