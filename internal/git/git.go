@@ -107,21 +107,21 @@ func DiscoverRepositories(roots string) []string {
 		}
 
 		// 2. Search for sub-repositories (only if not already in one)
-		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
-			if !info.IsDir() {
+			if !d.IsDir() {
 				return nil
 			}
-			name := info.Name()
+			name := d.Name()
 			if name == ".git" {
 				if absPath, err := filepath.Abs(filepath.Dir(path)); err == nil {
 					repos = append(repos, absPath)
 				}
 				return filepath.SkipDir
 			}
-			if name == "node_modules" || name == "target" || name == ".venv" || name == "vendor" {
+			if name == "node_modules" || name == "target" || name == ".venv" || name == "vendor" || name == "dist" || name == "out" || name == "bin" || name == "obj" {
 				return filepath.SkipDir
 			}
 
