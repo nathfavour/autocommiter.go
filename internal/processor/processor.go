@@ -185,6 +185,15 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 	return message, nil
 }
 
+func GetSummarizedChanges(repoRoot string) (string, error) {
+	fileChanges, err := summarizer.BuildFileChanges(repoRoot)
+	if err != nil {
+		return "", err
+	}
+	// Default to a large maxLen because the extension can handle it
+	return summarizer.CompressToJSON(fileChanges, 12000), nil
+}
+
 func EnsureGitignoreSafety(repoRoot string) error {
 	cfg, _ := config.LoadMergedConfig(repoRoot)
 	shouldUpdate := false

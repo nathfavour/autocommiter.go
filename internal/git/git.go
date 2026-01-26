@@ -89,37 +89,45 @@ func GetCurrentBranch(cwd string) (string, error) {
 	return RunGitCommand(cwd, "rev-parse", "--abbrev-ref", "HEAD")
 }
 
-func DiscoverRepositories(root string) []string {
+func DiscoverRepositories(roots string) []string {
 	var repos []string
+	rootList := strings.Split(roots, ",")
 
-	// 1. Check if we are inside a git repo
-	if toplevel, err := GetRepoRoot(root); err == nil {
-		if absToplevel, err := filepath.Abs(toplevel); err == nil {
-			return []string{absToplevel}
+	for _, root := range rootList {
+		root = strings.TrimSpace(root)
+		if root == "" {
+			continue
 		}
-	}
 
-	// 2. Search for sub-repositories (only if not already in one)
-	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !info.IsDir() {
-			return nil
-		}
-		name := info.Name()
-		if name == ".git" {
-			if absPath, err := filepath.Abs(filepath.Dir(path)); err == nil {
-				repos = append(repos, absPath)
+		// 1. Check if we are inside a git repo
+		if toplevel, err := GetRepoRoot(root); err == nil {
+			if absToplevel, err := filepath.Abs(toplevel); err == nil {
+				repos = append(repos, absToplevel)
 			}
-			return filepath.SkipDir
-		}
-		if name == "node_modules" || name == "target" || name == ".venv" || name == "vendor" {
-			return filepath.SkipDir
 		}
 
-		return nil
-	})
+		// 2. Search for sub-repositories (only if not already in one)
+		filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+			if !info.IsDir() {
+				return nil
+			}
+			name := info.Name()
+			if name == ".git" {
+				if absPath, err := filepath.Abs(filepath.Dir(path)); err == nil {
+					repos = append(repos, absPath)
+				}
+				return filepath.SkipDir
+			}
+			if name == "node_modules" || name == "target" || name == ".venv" || name == "vendor" {
+				return filepath.SkipDir
+			}
+
+			return nil
+		})
+	}
 
 	sort.Strings(repos)
 	if len(repos) > 1 {

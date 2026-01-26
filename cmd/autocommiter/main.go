@@ -86,6 +86,63 @@ func main() {
 	}
 	rootCmd.AddCommand(generateMessageCmd)
 
+	var jsonOutput bool
+	var listReposCmd = &cobra.Command{
+		Use:   "list-repos",
+		Short: "List all git repositories in the specified path",
+		Run: func(cmd *cobra.Command, args []string) {
+			path := repoPath
+			if path == "" {
+				path = "."
+			}
+			repos := git.DiscoverRepositories(path)
+			if jsonOutput {
+				data, _ := json.Marshal(repos)
+				fmt.Print(string(data))
+			} else {
+				for _, r := range repos {
+					fmt.Println(r)
+				}
+			}
+		},
+	}
+	listReposCmd.Flags().BoolVar(&jsonOutput, "json", false, "Output in JSON format")
+	rootCmd.AddCommand(listReposCmd)
+
+	var prepareCmd = &cobra.Command{
+		Use:   "prepare",
+		Short: "Prepare a repository ( stage changes and ensure gitignore safety)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := repoPath
+			if path == "" {
+				path = "."
+			}
+			if err := processor.EnsureGitignoreSafety(path); err != nil {
+				return err
+			}
+			return git.StageAllChanges(path)
+		},
+	}
+	rootCmd.AddCommand(prepareCmd)
+
+	var summarizeCmd = &cobra.Command{
+		Use:   "summarize",
+		Short: "Summarize changes in a repository as JSON",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := repoPath
+			if path == "" {
+				path = "."
+			}
+			fileChanges, err := processor.GetSummarizedChanges(path)
+			if err != nil {
+				return err
+			}
+			fmt.Print(fileChanges)
+			return nil
+		},
+	}
+	rootCmd.AddCommand(summarizeCmd)
+
 	var setApiKeyCmd = &cobra.Command{
 		Use:   "set-api-key [KEY]",
 		Short: "Set GitHub API key (optional if 'gh auth login' is used)",
