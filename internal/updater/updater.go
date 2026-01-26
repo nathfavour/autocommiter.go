@@ -22,7 +22,7 @@ type release struct {
 }
 
 func CheckForUpdates(currentVersion string) {
-	if currentVersion == "v0.0.0-dev" || currentVersion == "dev" {
+	if currentVersion == "dev" || currentVersion == "" {
 		// Even in dev, we might want to check if BuildFromSource is enabled
 		cfg, _ := config.LoadConfig()
 		if cfg.BuildFromSource == nil || !*cfg.BuildFromSource {
@@ -48,7 +48,7 @@ func AutoUpdate(currentVersion string) {
 		buildFromSource = *cfg.BuildFromSource
 	}
 
-	if currentVersion == "v0.0.0-dev" || currentVersion == "dev" {
+	if currentVersion == "dev" || currentVersion == "" {
 		if !buildFromSource {
 			return
 		}
@@ -103,7 +103,7 @@ func isNewer(latest, current string) bool {
 	if latest == "" || latest == "latest" {
 		return latest != current
 	}
-	if current == "v0.0.0-dev" || current == "dev" {
+	if current == "dev" || current == "" {
 		return true
 	}
 	// Simple string comparison for now, can be improved with semver
