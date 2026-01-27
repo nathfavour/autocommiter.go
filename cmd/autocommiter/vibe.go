@@ -54,7 +54,7 @@ var executeCmd = &cobra.Command{
 			fmt.Println("Tool name required")
 			os.Exit(1)
 		}
-		
+
 		toolName := args[0]
 		var params struct {
 			RepoPath string `json:"repo_path"`
@@ -62,11 +62,11 @@ var executeCmd = &cobra.Command{
 		if len(args) > 1 {
 			_ = json.Unmarshal([]byte(args[1]), &params)
 		}
-		
+
 		if params.RepoPath == "" {
 			params.RepoPath = "."
 		}
-		
+
 		switch toolName {
 		case "generate_commit_message":
 			msg, err := processor.GenerateMessage(params.RepoPath)
