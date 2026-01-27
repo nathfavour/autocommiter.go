@@ -56,12 +56,9 @@ func main() {
 		updater.CheckForUpdates(version)
 	}
 
-		Use:     "autocommiter",
-		Short:   "Auto-generate git commit messages using AI",
-		Version: fmt.Sprintf("%s (%s, %s)", version, commit, date),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			return processor.GenerateCommit(repoPath, noPush, force)
-		},
+	rootCmd.Version = fmt.Sprintf("%s (%s, %s)", version, commit, date)
+	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		return processor.GenerateCommit(repoPath, noPush, force)
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&repoPath, "repo", "r", "", "Path to git repository (defaults to current directory)")
