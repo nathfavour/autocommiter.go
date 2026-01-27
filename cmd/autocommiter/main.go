@@ -21,6 +21,10 @@ import (
 )
 
 var (
+rootCmd = &cobra.Command{
+		Use:     "autocommiter",
+		Short:   "Auto-generate git commit messages using AI",
+	}
 	repoPath string
 	noPush   bool
 	force    bool
@@ -52,7 +56,6 @@ func main() {
 		updater.CheckForUpdates(version)
 	}
 
-	var rootCmd = &cobra.Command{
 		Use:     "autocommiter",
 		Short:   "Auto-generate git commit messages using AI",
 		Version: fmt.Sprintf("%s (%s, %s)", version, commit, date),
