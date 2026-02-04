@@ -14,6 +14,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/nathfavour/autocommiter.go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/netutil"
 )
 
 const repo = "nathfavour/autocommiter.go"
@@ -80,7 +81,7 @@ func AutoUpdate(currentVersion string) {
 func getLatestTag() (string, error) {
 	// Instead of /releases/latest which only returns full releases,
 	// we fetch all releases and pick the first one (usually the newest)
-	resp, err := http.Get(fmt.Sprintf("https://api.github.com/repos/%s/releases", repo))
+	resp, err := netutil.GetHttpClient().Get(fmt.Sprintf("https://api.github.com/repos/%s/releases", repo))
 	if err != nil {
 		return "", err
 	}
@@ -221,7 +222,7 @@ func SeamlessUpdate(currentVersion string) error {
 
 	color.Yellow("📥 Downloading binary...")
 
-	resp, err := http.Get(downloadURL)
+	resp, err := netutil.GetHttpClient().Get(downloadURL)
 	if err != nil {
 		return fmt.Errorf("download failed: %w", err)
 	}

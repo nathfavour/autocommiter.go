@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/nathfavour/autocommiter.go/internal/netutil"
 )
 
 type Message struct {
@@ -77,7 +79,7 @@ func CallInferenceAPI(apiKey, branch, prompt, model string) (string, error) {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 
-	client := &http.Client{}
+	client := netutil.GetHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

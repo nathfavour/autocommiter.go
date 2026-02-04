@@ -8,6 +8,7 @@ import (
 
 	"github.com/nathfavour/autocommiter.go/internal/auth"
 	"github.com/nathfavour/autocommiter.go/internal/config"
+	"github.com/nathfavour/autocommiter.go/internal/netutil"
 )
 
 type ModelInfo struct {
@@ -64,7 +65,7 @@ func FetchAvailableModels(apiKey string) ([]ModelInfo, error) {
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
-	client := &http.Client{}
+	client := netutil.GetHttpClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return GetDefaultModels(), nil
