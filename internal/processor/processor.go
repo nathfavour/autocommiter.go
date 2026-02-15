@@ -255,6 +255,48 @@ func GetSummarizedChanges(repoRoot string) (string, error) {
 	return summarizer.CompressToJSON(fileChanges, 12000), nil
 }
 
+func FixLastCommit(repoRoot string, targetUser string) error {
+	if targetUser == "" {
+		return fmt.Errorf("please specify a user with --user")
+	}
+
+	color.Cyan("🔧 Repairing last commit for: %s", targetUser)
+
+	// 1. Switch Account
+	if err := auth.SwitchAccount(targetUser); err != nil {
+		return fmt.Errorf("failed to switch to account %s: %v", targetUser, err)
+	}
+
+	// 2. Get Identity
+	name, email, err := auth.GetAccountIdentity()
+	if err != nil {
+		return fmt.Errorf("failed to get identity for %s: %v", targetUser, err)
+	}
+
+	// 3. Sync Local Config
+	if err := git.SyncLocalConfig(repoRoot, name, email); err != nil {
+		return fmt.Errorf("failed to sync git config: %v", err)
+	}
+
+	// 4. Amend Commit
+	color.Cyan("✍️ Amending commit author...")
+	authorStr := fmt.Sprintf("%s <%s>", name, email)
+	_, err = git.RunGitCommand(repoRoot, "commit", "--amend", "--no-edit", "--author", authorStr)
+	if err != nil {
+		return fmt.Errorf("failed to amend commit: %v", err)
+	}
+
+	// 5. Force Push (Safety first)
+	color.Yellow("⚠️ Force-pushing changes to remote...")
+	_, err = git.RunGitCommand(repoRoot, "push", "--force-with-lease")
+	if err != nil {
+		return fmt.Errorf("failed to push changes: %v", err)
+	}
+
+	color.Green("✨ Commit repaired successfully!")
+	return nil
+}
+
 func EnsureGitignoreSafety(repoRoot string) error {
 	cfg, _ := config.LoadMergedConfig(repoRoot)
 	shouldUpdate := false

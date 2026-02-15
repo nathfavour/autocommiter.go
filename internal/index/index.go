@@ -65,6 +65,15 @@ func InitDB() (*sql.DB, error) {
 		name TEXT,
 		last_used INTEGER
 	);
+	CREATE TABLE IF NOT EXISTS gravity (
+		dir_path TEXT PRIMARY KEY,
+		account_handle TEXT,
+		weight INTEGER
+	);
+	CREATE TABLE IF NOT EXISTS global_stats (
+		key TEXT PRIMARY KEY,
+		value TEXT
+	);
 	`
 	_, err = db.Exec(schema)
 	if err != nil {

@@ -3,6 +3,7 @@ package processor
 import (
 	"crypto/sha256"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nathfavour/autocommiter.go/internal/auth"
@@ -37,30 +38,40 @@ func (m *AccountManager) Wait() error {
 }
 
 func (m *AccountManager) discover() error {
-	// 1. Sentinel Check (Fast-Exit)
+	// 1. Fast-Exit Sentinel
 	if index.HasSingleAccountSentinel() {
 		m.isSingle = true
 		return nil
 	}
 
-	// 2. Check accounts count
+	// 2. Directory Gravity (High Confidence)
+	// Check if any parent directory name matches a logged-in account
 	accounts, err := auth.ListAccounts()
 	if err != nil {
 		return err
 	}
-
 	if len(accounts) <= 1 {
 		_ = index.SetSingleAccountSentinel(true)
 		m.isSingle = true
 		return nil
 	}
 
-	// 3. Affinity Mapping
+	for _, acc := range accounts {
+		if strings.Contains(m.repoRoot, "/"+acc+"/") || strings.HasSuffix(m.repoRoot, "/"+acc) {
+			m.targetAccount = acc
+			// If we find a gravity match, we are confident enough to brute
+			return nil
+		}
+	}
+
+	// 3. Affinity Mapping (Normal Path)
 	db, err := index.InitDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
+    
+    // ... rest of existing discovery logic (Cache -> Config -> History)
 
 	repoHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.repoRoot)))
 

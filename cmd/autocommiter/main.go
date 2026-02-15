@@ -507,14 +507,20 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
-	var updateCmd = &cobra.Command{
-		Use:   "update",
-		Short: "Self-update autocommiter to the latest version",
+	var userToFix string
+	var fixCmd = &cobra.Command{
+		Use:   "fix",
+		Short: "Repair the last commit with a different GitHub account",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return updater.SeamlessUpdate(version)
+			path := repoPath
+			if path == "" {
+				path = "."
+			}
+			return processor.FixLastCommit(path, userToFix)
 		},
 	}
-	rootCmd.AddCommand(updateCmd)
+	fixCmd.Flags().StringVarP(&userToFix, "user", "u", "", "GitHub handle to switch to")
+	rootCmd.AddCommand(fixCmd)
 
 	var cleanCmd = &cobra.Command{
 		Use:   "clean",
