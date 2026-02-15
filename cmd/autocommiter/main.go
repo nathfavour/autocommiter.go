@@ -78,7 +78,7 @@ func main() {
 		Use:   "generate-message",
 		Short: "Generate and output only the commit message (no commit/push)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			msg, err := processor.GenerateMessage(repoPath)
+			msg, err := processor.GenerateMessage(repoPath, nil)
 			if err != nil {
 				return err
 			}

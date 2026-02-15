@@ -46,6 +46,10 @@ func GenerateCommit(repoPath string, noPush bool, force bool) error {
 func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("📂 Repository: %s", color.New(color.Bold).Sprint(repoRoot))
 
+	// Start account discovery in background
+	accMgr := NewAccountManager(repoRoot)
+	accMgr.StartDiscovery()
+
 	// Ensure gitignore safety
 	color.Cyan("🛡️ Ensure .gitignore safety...")
 	if err := EnsureGitignoreSafety(repoRoot); err != nil {
@@ -82,7 +86,7 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	}
 
 	// Generate message
-	message, err := GenerateMessage(repoRoot)
+	message, err := GenerateMessage(repoRoot, accMgr)
 	if err != nil {
 		return err
 	}
@@ -115,7 +119,7 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	// Push
 	if !noPush {
 		color.Cyan("🚀 Pushing to remote...")
-		if err := git.PushChanges(repoRoot); err != nil {
+		if err := PushWithRetry(repoRoot, accMgr); err != nil {
 			return err
 		}
 		color.Green("✓ Push successful!")
@@ -125,12 +129,69 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	return nil
 }
 
-func GenerateMessage(repoRoot string) (string, error) {
+func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
+	err := git.PushChanges(repoRoot)
+	if err == nil {
+		return nil
+	}
+
+	// If it's not an auth error, just return it
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "403") && !strings.Contains(errMsg, "401") && !strings.Contains(errMsg, "Permission denied") && !strings.Contains(errMsg, "Authentication failed") {
+		return err
+	}
+
+	color.Yellow("⚠️ Push failed with authentication error. Attempting reactive account switch...")
+
+	// Reactive strategy: try other accounts
+	accounts, listErr := auth.ListAccounts()
+	if listErr != nil || len(accounts) <= 1 {
+		return err // Give up if we can't list or only have 1
+	}
+
+	activeUser := auth.GetGithubUser()
+	for _, acc := range accounts {
+		if acc == activeUser {
+			continue
+		}
+
+		color.Cyan("🔄 Trying account: %s...", acc)
+		if switchErr := auth.SwitchAccount(acc); switchErr == nil {
+			// Try fetching identity and sync config for this account too
+			if name, email, identErr := auth.GetAccountIdentity(); identErr == nil {
+				_ = git.SyncLocalConfig(repoRoot, name, email)
+			}
+
+			if retryErr := git.PushChanges(repoRoot); retryErr == nil {
+				// Success! Cache this for next time
+				if name, email, identErr := auth.GetAccountIdentity(); identErr == nil {
+					accMgr.CacheAccount(acc, email, name)
+				}
+				return nil
+			}
+		}
+	}
+
+	// If we tried everything and still failed, switch back to original or just return last error
+	_ = auth.SwitchAccount(activeUser)
+	return err
+}
+
+func GenerateMessage(repoRoot string, accMgr *AccountManager) (string, error) {
 	cfg, _ := config.LoadMergedConfig(repoRoot)
 
 	apiKey := ""
 	if cfg.APIKey != nil {
 		apiKey = *cfg.APIKey
+	}
+
+	// Wait for account discovery to finish
+	if accMgr != nil {
+		if err := accMgr.Wait(); err == nil {
+			if err := accMgr.Sync(); err != nil {
+				color.Yellow("⚠️ Account sync warning: %v", err)
+			}
+		}
 	}
 
 	token := auth.GetToken(apiKey)

@@ -69,7 +69,7 @@ var executeCmd = &cobra.Command{
 
 		switch toolName {
 		case "generate_commit_message":
-			msg, err := processor.GenerateMessage(params.RepoPath)
+			msg, err := processor.GenerateMessage(params.RepoPath, nil)
 			if err != nil {
 				fmt.Printf(`{"content": "Error: %v", "status": "error"}`+"\n", err)
 				return

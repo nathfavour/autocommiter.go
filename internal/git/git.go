@@ -89,6 +89,54 @@ func GetCurrentBranch(cwd string) (string, error) {
 	return RunGitCommand(cwd, "rev-parse", "--abbrev-ref", "HEAD")
 }
 
+func GetLocalIdentity(cwd string) (string, string) {
+	email, _ := RunGitCommand(cwd, "config", "user.email")
+	name, _ := RunGitCommand(cwd, "config", "user.name")
+	return name, email
+}
+
+func GetHistoryIdentity(cwd string) (string, string) {
+	// Get the last committer email
+	email, _ := RunGitCommand(cwd, "log", "-1", "--pretty=format:%ae")
+	name, _ := RunGitCommand(cwd, "log", "-1", "--pretty=format:%an")
+	return name, email
+}
+
+func GetRemoteOwner(cwd string) string {
+	url, err := RunGitCommand(cwd, "remote", "get-url", "origin")
+	if err != nil {
+		return ""
+	}
+	// Parse git@github.com:owner/repo.git or https://github.com/owner/repo.git
+	url = strings.TrimSuffix(url, ".git")
+	parts := strings.Split(url, "/")
+	if len(parts) > 1 {
+		ownerPart := parts[len(parts)-2]
+		if strings.Contains(ownerPart, ":") {
+			subParts := strings.Split(ownerPart, ":")
+			return subParts[len(subParts)-1]
+		}
+		return ownerPart
+	}
+	return ""
+}
+
+func SyncLocalConfig(cwd string, name string, email string) error {
+	if name != "" {
+		_, err := RunGitCommand(cwd, "config", "--local", "user.name", name)
+		if err != nil {
+			return err
+		}
+	}
+	if email != "" {
+		_, err := RunGitCommand(cwd, "config", "--local", "user.email", email)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func DiscoverRepositories(roots string) []string {
 	var repos []string
 	rootList := strings.Split(roots, ",")
