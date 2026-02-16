@@ -15,10 +15,10 @@ import (
 type AccountManager struct {
 	repoRoot      string
 	result        chan error
-	targetAccount string
-	targetEmail   string
-	targetName    string
-	isSingle      bool
+	TargetAccount string
+	TargetEmail   string
+	TargetName    string
+	IsSingle      bool
 }
 
 func NewAccountManager(repoRoot string) *AccountManager {
