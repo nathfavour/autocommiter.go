@@ -54,6 +54,7 @@ func InitDB() (*sql.DB, error) {
 		return nil, err
 	}
 
+	// Use sqlite driver from modernc.org
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite: %w", err)
