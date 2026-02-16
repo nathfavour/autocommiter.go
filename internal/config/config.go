@@ -17,6 +17,7 @@ type Config struct {
 	AutoUpdate        *bool    `json:"auto_update"`
 	BuildFromSource   *bool    `json:"build_from_source"`
 	PreferNoReplyEmail *bool    `json:"prefer_noreply_email"`
+	DefaultUser       *string  `json:"default_user"`
 	LastUpdateCheck   int64    `json:"last_update_check"`
 	LatestVersionFound string  `json:"latest_version_found"`
 	GitignorePatterns []string `json:"gitignore_patterns"`
@@ -31,6 +32,7 @@ func DefaultConfig() Config {
 	autoUpdate := true
 	buildFromSource := false
 	preferNoReplyEmail := true
+	defaultUser := ""
 
 	return Config{
 		APIKey:            &apiKey,
@@ -41,6 +43,7 @@ func DefaultConfig() Config {
 		AutoUpdate:        &autoUpdate,
 		BuildFromSource:   &buildFromSource,
 		PreferNoReplyEmail: &preferNoReplyEmail,
+		DefaultUser:       &defaultUser,
 		LastUpdateCheck:   0,
 		LatestVersionFound: "",
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
@@ -153,6 +156,9 @@ func mergeConfigs(base *Config, override Config) {
 	if override.PreferNoReplyEmail != nil {
 		base.PreferNoReplyEmail = override.PreferNoReplyEmail
 	}
+	if override.DefaultUser != nil && *override.DefaultUser != "" {
+		base.DefaultUser = override.DefaultUser
+	}
 	if len(override.GitignorePatterns) > 0 {
 		base.GitignorePatterns = override.GitignorePatterns
 	}
@@ -170,6 +176,15 @@ func SaveConfig(config Config) error {
 	}
 
 	return os.WriteFile(configFile, content, 0644)
+}
+
+func SaveRepoConfig(repoRoot string, config Config) error {
+	repoConfigPath := filepath.Join(repoRoot, ".autocommiter.json")
+	content, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(repoConfigPath, content, 0644)
 }
 
 func GetAPIKey() (string, error) {

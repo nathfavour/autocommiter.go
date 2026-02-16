@@ -39,7 +39,14 @@ func (m *AccountManager) Wait() error {
 }
 
 func (m *AccountManager) discover() error {
-	// 1. Fast-Exit Sentinel
+	// 1. Check for Default User in config
+	cfg, _ := config.LoadMergedConfig(m.repoRoot)
+	if cfg.DefaultUser != nil && *cfg.DefaultUser != "" {
+		m.targetAccount = *cfg.DefaultUser
+		return nil
+	}
+
+	// 2. Fast-Exit Sentinel
 	if index.HasSingleAccountSentinel() {
 		m.isSingle = true
 		return nil
