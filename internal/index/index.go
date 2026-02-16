@@ -90,6 +90,10 @@ func InitDB() (*sql.DB, error) {
 }
 
 func GetRepoHash(repoRoot string) string {
+	abs, err := filepath.Abs(repoRoot)
+	if err == nil {
+		repoRoot = abs
+	}
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(repoRoot)))
 }
 
