@@ -1,8 +1,6 @@
 package processor
 
 import (
-	"crypto/sha256"
-	"fmt"
 	"strings"
 	"time"
 
@@ -78,9 +76,7 @@ func (m *AccountManager) discover() error {
 	}
 	defer db.Close()
     
-    // ... rest of existing discovery logic (Cache -> Config -> History)
-
-	repoHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.repoRoot)))
+	repoHash := index.GetRepoHash(m.repoRoot)
 
 	// 3.1 SQLite Cache
 	var cachedAccount, cachedEmail, cachedName string
@@ -155,7 +151,7 @@ func (m *AccountManager) Sync() error {
 			db, err := index.InitDB()
 			if err == nil {
 				defer db.Close()
-				repoHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.repoRoot)))
+				repoHash := index.GetRepoHash(m.repoRoot)
 				_, _ = db.Exec("INSERT OR REPLACE INTO repo_cache (repo_path_hash, account_handle, email, name, last_used) VALUES (?, ?, ?, ?, ?)",
 					repoHash, m.TargetAccount, m.TargetEmail, m.TargetName, time.Now().Unix())
 			}
@@ -175,7 +171,7 @@ func (m *AccountManager) CacheAccount(account, email, name string) {
 	db, err := index.InitDB()
 	if err == nil {
 		defer db.Close()
-		repoHash := fmt.Sprintf("%x", sha256.Sum256([]byte(m.repoRoot)))
+		repoHash := index.GetRepoHash(m.repoRoot)
 		_, _ = db.Exec("INSERT OR REPLACE INTO repo_cache (repo_path_hash, account_handle, email, name, last_used) VALUES (?, ?, ?, ?, ?)",
 			repoHash, account, email, name, time.Now().Unix())
 	}
