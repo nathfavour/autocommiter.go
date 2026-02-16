@@ -43,6 +43,56 @@ func GenerateCommit(repoPath string, noPush bool, force bool) error {
 	return nil
 }
 
+func SetupUser(repoPath string, user string) error {
+	if user == "" {
+		return nil
+	}
+
+	startDir := repoPath
+	if startDir == "" {
+		startDir = "."
+	}
+
+	repos := git.DiscoverRepositories(startDir)
+	if len(repos) == 0 {
+		return fmt.Errorf("no git repositories found in %s", startDir)
+	}
+
+	for _, repoRoot := range repos {
+		color.Cyan("👤 Setting default user for %s: %s", repoRoot, user)
+
+		// 1. Switch Account
+		if err := auth.SwitchAccount(user); err != nil {
+			return fmt.Errorf("failed to switch to account %s: %v", user, err)
+		}
+
+		// 2. Save to local config
+		repoCfg, _ := config.LoadMergedConfig(repoRoot)
+		repoCfg.DefaultUser = &user
+		if err := config.SaveRepoConfig(repoRoot, repoCfg); err != nil {
+			return fmt.Errorf("failed to save repo config: %v", err)
+		}
+
+		// 3. Sync Git Config
+		preferNoReply := true
+		if repoCfg.PreferNoReplyEmail != nil {
+			preferNoReply = *repoCfg.PreferNoReplyEmail
+		}
+
+		name, email, err := auth.GetAccountIdentity(preferNoReply)
+		if err != nil {
+			color.Yellow("⚠️ Could not fetch identity for %s: %v", user, err)
+		} else {
+			if err := git.SyncLocalConfig(repoRoot, name, email); err != nil {
+				color.Yellow("⚠️ Could not sync git config: %v", err)
+			}
+		}
+		color.Green("✓ User %s is now the default for this repository", user)
+	}
+
+	return nil
+}
+
 func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("📂 Repository: %s", color.New(color.Bold).Sprint(repoRoot))
 
