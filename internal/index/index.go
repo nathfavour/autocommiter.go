@@ -124,3 +124,14 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	}
 	return user.String, nil
 }
+
+func ListAllCache() {
+	db, _ := InitDB()
+	defer db.Close()
+	rows, _ := db.Query("SELECT repo_path_hash, account_handle, default_user FROM repo_cache")
+	for rows.Next() {
+		var hash, handle, def sql.NullString
+		rows.Scan(&hash, &handle, &def)
+		fmt.Printf("HASH: %s | HANDLE: %s | DEFAULT: %s\n", hash.String, handle.String, def.String)
+	}
+}

@@ -60,6 +60,7 @@ func SetupUser(repoPath string, user string) error {
 	}
 
 	for _, repoRoot := range repos {
+		repoRoot, _ = filepath.Abs(repoRoot)
 		color.Cyan("👤 Setting default user for %s: %s", repoRoot, user)
 
 		// 1. Switch Account
@@ -109,6 +110,7 @@ func AnalyzeRepo(repoPath string, applyChanges bool) error {
 	}
 
 	for _, repoRoot := range repos {
+		repoRoot, _ = filepath.Abs(repoRoot)
 		color.New(color.FgCyan, color.Bold).Printf("\n🔍 Analysis for: %s\n", repoRoot)
 
 		// 1. Current State
