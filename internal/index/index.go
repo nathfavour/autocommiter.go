@@ -94,7 +94,9 @@ func GetRepoHash(repoRoot string) string {
 	if err == nil {
 		repoRoot = abs
 	}
-	return fmt.Sprintf("%x", sha256.Sum256([]byte(repoRoot)))
+	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(repoRoot)))
+	// fmt.Printf("DEBUG: Path=%s HASH=%s\n", repoRoot, hash)
+	return hash
 }
 
 func SetDefaultUser(repoRoot string, user string) error {
@@ -105,6 +107,7 @@ func SetDefaultUser(repoRoot string, user string) error {
 	defer db.Close()
 
 	repoHash := GetRepoHash(repoRoot)
+	fmt.Printf("DEBUG: Saving DefaultUser=%s for Hash=%s\n", user, repoHash)
 	// We use the handle as both the account_handle and default_user for consistency in manual setup
 	_, err = db.Exec("INSERT INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?) ON CONFLICT(repo_path_hash) DO UPDATE SET default_user = excluded.default_user, account_handle = excluded.account_handle, last_used = excluded.last_used",
 		repoHash, user, user, time.Now().Unix())
@@ -123,10 +126,12 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			fmt.Printf("DEBUG: No DefaultUser found for Hash=%s\n", repoHash)
 			return "", nil
 		}
 		return "", err
 	}
+	fmt.Printf("DEBUG: Found DefaultUser=%s for Hash=%s\n", user.String, repoHash)
 	return user.String, nil
 }
 
