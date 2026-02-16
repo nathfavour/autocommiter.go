@@ -158,13 +158,24 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 		color.Cyan("🔄 Trying account: %s...", acc)
 		if switchErr := auth.SwitchAccount(acc); switchErr == nil {
 			// Try fetching identity and sync config for this account too
-			if name, email, identErr := auth.GetAccountIdentity(); identErr == nil {
+			cfg, _ := config.LoadMergedConfig(repoRoot)
+			preferNoReply := true
+			if cfg.PreferNoReplyEmail != nil {
+				preferNoReply = *cfg.PreferNoReplyEmail
+			}
+
+			if name, email, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
 				_ = git.SyncLocalConfig(repoRoot, name, email)
 			}
 
 			if retryErr := git.PushChanges(repoRoot); retryErr == nil {
 				// Success! Cache this for next time
-				if name, email, identErr := auth.GetAccountIdentity(); identErr == nil {
+				cfg, _ := config.LoadMergedConfig(repoRoot)
+				preferNoReply := true
+				if cfg.PreferNoReplyEmail != nil {
+					preferNoReply = *cfg.PreferNoReplyEmail
+				}
+				if name, email, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
 					accMgr.CacheAccount(acc, email, name)
 				}
 				return nil
@@ -268,7 +279,13 @@ func FixLastCommit(repoRoot string, targetUser string) error {
 	}
 
 	// 2. Get Identity
-	name, email, err := auth.GetAccountIdentity()
+	cfg, _ := config.LoadMergedConfig(repoRoot)
+	preferNoReply := true
+	if cfg.PreferNoReplyEmail != nil {
+		preferNoReply = *cfg.PreferNoReplyEmail
+	}
+
+	name, email, err := auth.GetAccountIdentity(preferNoReply)
 	if err != nil {
 		return fmt.Errorf("failed to get identity for %s: %v", targetUser, err)
 	}

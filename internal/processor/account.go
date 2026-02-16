@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nathfavour/autocommiter.go/internal/auth"
+	"github.com/nathfavour/autocommiter.go/internal/config"
 	"github.com/nathfavour/autocommiter.go/internal/git"
 	"github.com/nathfavour/autocommiter.go/internal/index"
 )
@@ -132,7 +133,13 @@ func (m *AccountManager) Sync() error {
 
 	// If we don't have email/name (not in cache), fetch them
 	if m.targetEmail == "" {
-		name, email, err := auth.GetAccountIdentity()
+		cfg, _ := config.LoadMergedConfig(m.repoRoot)
+		preferNoReply := true
+		if cfg.PreferNoReplyEmail != nil {
+			preferNoReply = *cfg.PreferNoReplyEmail
+		}
+
+		name, email, err := auth.GetAccountIdentity(preferNoReply)
 		if err == nil {
 			m.targetEmail = email
 			m.targetName = name

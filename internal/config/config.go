@@ -16,6 +16,7 @@ type Config struct {
 	SkipConfirmation  *bool    `json:"skip_confirmation"`
 	AutoUpdate        *bool    `json:"auto_update"`
 	BuildFromSource   *bool    `json:"build_from_source"`
+	PreferNoReplyEmail *bool    `json:"prefer_noreply_email"`
 	LastUpdateCheck   int64    `json:"last_update_check"`
 	LatestVersionFound string  `json:"latest_version_found"`
 	GitignorePatterns []string `json:"gitignore_patterns"`
@@ -29,6 +30,7 @@ func DefaultConfig() Config {
 	skipConfirmation := false
 	autoUpdate := true
 	buildFromSource := false
+	preferNoReplyEmail := true
 
 	return Config{
 		APIKey:            &apiKey,
@@ -38,6 +40,7 @@ func DefaultConfig() Config {
 		SkipConfirmation:  &skipConfirmation,
 		AutoUpdate:        &autoUpdate,
 		BuildFromSource:   &buildFromSource,
+		PreferNoReplyEmail: &preferNoReplyEmail,
 		LastUpdateCheck:   0,
 		LatestVersionFound: "",
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
@@ -146,6 +149,9 @@ func mergeConfigs(base *Config, override Config) {
 	}
 	if override.BuildFromSource != nil {
 		base.BuildFromSource = override.BuildFromSource
+	}
+	if override.PreferNoReplyEmail != nil {
+		base.PreferNoReplyEmail = override.PreferNoReplyEmail
 	}
 	if len(override.GitignorePatterns) > 0 {
 		base.GitignorePatterns = override.GitignorePatterns
