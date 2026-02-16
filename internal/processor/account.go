@@ -145,10 +145,11 @@ func (m *AccountManager) Sync() error {
 			preferNoReply = *cfg.PreferNoReplyEmail
 		}
 
-		name, email, err := auth.GetAccountIdentity(preferNoReply)
+		name, email, login, err := auth.GetAccountIdentity(preferNoReply)
 		if err == nil {
 			m.targetEmail = email
 			m.targetName = name
+			m.targetAccount = login // Ensure we use the actual handle
 			
 			// Cache it
 			db, err := index.InitDB()

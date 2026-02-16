@@ -79,10 +79,14 @@ func SetupUser(repoPath string, user string) error {
 			preferNoReply = *mergedCfg.PreferNoReplyEmail
 		}
 
-		name, email, err := auth.GetAccountIdentity(preferNoReply)
+		name, email, login, err := auth.GetAccountIdentity(preferNoReply)
 		if err != nil {
 			color.Yellow("⚠️ Could not fetch identity for %s: %v", user, err)
 		} else {
+			// Double check handle match
+			if !stringsEqual(login, user) {
+				color.Yellow("⚠️ Handle mismatch: requested %s but got %s", user, login)
+			}
 			if err := git.SyncLocalConfig(repoRoot, name, email); err != nil {
 				color.Yellow("⚠️ Could not sync git config: %v", err)
 			}
@@ -187,7 +191,8 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 
 	// If it's not an auth error, just return it
 	errMsg := err.Error()
-	if !strings.Contains(errMsg, "403") && !strings.Contains(errMsg, "401") && !strings.Contains(errMsg, "Permission denied") && !strings.Contains(errMsg, "Authentication failed") {
+	isAuthError := strings.Contains(errMsg, "403") || strings.Contains(errMsg, "401") || strings.Contains(errMsg, "Permission denied") || strings.Contains(errMsg, "Authentication failed")
+	if !isAuthError {
 		return err
 	}
 
@@ -214,21 +219,25 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 				preferNoReply = *cfg.PreferNoReplyEmail
 			}
 
-			if name, email, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
+			if name, email, login, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
 				_ = git.SyncLocalConfig(repoRoot, name, email)
-			}
+				
+				// Re-amend to fix authorship if we switched accounts
+				authorStr := fmt.Sprintf("%s <%s>", name, email)
+				_, _ = git.RunGitCommand(repoRoot, "commit", "--amend", "--no-edit", "--author", authorStr)
 
-			if retryErr := git.PushChanges(repoRoot); retryErr == nil {
-				// Success! Cache this for next time
-				cfg, _ := config.LoadMergedConfig(repoRoot)
-				preferNoReply := true
-				if cfg.PreferNoReplyEmail != nil {
-					preferNoReply = *cfg.PreferNoReplyEmail
+				if retryErr := git.PushChanges(repoRoot); retryErr == nil {
+					// Success! Cache this for next time
+					accMgr.CacheAccount(login, email, name)
+					
+					// IMPORTANT: If we had a default user set that failed, update it to the one that worked
+					if defUser, _ := index.GetDefaultUser(repoRoot); defUser != "" {
+						color.Cyan("💡 Updating default user to %s since it has push access", login)
+						_ = index.SetDefaultUser(repoRoot, login)
+					}
+					
+					return nil
 				}
-				if name, email, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
-					accMgr.CacheAccount(acc, email, name)
-				}
-				return nil
 			}
 		}
 	}
@@ -335,7 +344,7 @@ func FixLastCommit(repoRoot string, targetUser string) error {
 		preferNoReply = *cfg.PreferNoReplyEmail
 	}
 
-	name, email, err := auth.GetAccountIdentity(preferNoReply)
+	name, email, _, err := auth.GetAccountIdentity(preferNoReply)
 	if err != nil {
 		return fmt.Errorf("failed to get identity for %s: %v", targetUser, err)
 	}

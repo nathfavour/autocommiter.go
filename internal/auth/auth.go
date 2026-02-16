@@ -85,14 +85,13 @@ func ListAccounts() ([]string, error) {
 	return users, nil
 }
 
-// GetAccountIdentity fetches the primary verified email and name for a given account.
-// Note: This requires the account to be active.
-func GetAccountIdentity(preferNoReply bool) (string, string, error) {
+// GetAccountIdentity fetches the primary verified email, name and login for the active account.
+func GetAccountIdentity(preferNoReply bool) (name string, email string, login string, err error) {
 	// Get User Data (Name, Login, ID)
 	cmd := exec.Command("gh", "api", "user", "--jq", "{name: (.name // .login), login: .login, id: .id}")
 	out, err := cmd.Output()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	var data struct {
@@ -101,23 +100,23 @@ func GetAccountIdentity(preferNoReply bool) (string, string, error) {
 		ID    int64  `json:"id"`
 	}
 	if err := json.Unmarshal(out, &data); err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	if preferNoReply {
-		email := fmt.Sprintf("%d+%s@users.noreply.github.com", data.ID, data.Login)
-		return data.Name, email, nil
+		email = fmt.Sprintf("%d+%s@users.noreply.github.com", data.ID, data.Login)
+		return data.Name, email, data.Login, nil
 	}
 
 	// Fallback to real email if requested
 	cmdEmail := exec.Command("gh", "api", "user/emails", "--jq", ".[] | select(.primary == true and .verified == true) | .email")
 	outEmail, err := cmdEmail.Output()
 	if err != nil {
-		return data.Name, "", err
+		return data.Name, "", data.Login, nil
 	}
-	email := strings.TrimSpace(string(outEmail))
+	email = strings.TrimSpace(string(outEmail))
 
-	return data.Name, email, nil
+	return data.Name, email, data.Login, nil
 }
 
 // SwitchAccount switches the active gh account.
