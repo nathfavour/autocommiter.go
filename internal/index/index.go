@@ -109,17 +109,9 @@ func SetDefaultUser(repoRoot string, user string) error {
 	defer db.Close()
 
 	repoHash := GetRepoHash(repoRoot)
-	// Try a simple update first, then insert
-	_, err = db.Exec("UPDATE repo_cache SET default_user = ?, account_handle = ?, last_used = ? WHERE repo_path_hash = ?",
-		user, user, time.Now().Unix(), repoHash)
-	if err != nil {
-		return err
-	}
-
-	// Now try to insert if it doesn't exist
-	_, err = db.Exec("INSERT OR IGNORE INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?)",
+	// Use explicit INSERT OR REPLACE with all columns we care about
+	_, err = db.Exec("INSERT OR REPLACE INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?)",
 		repoHash, user, user, time.Now().Unix())
-	
 	return err
 }
 
