@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/nathfavour/autocommiter.go/internal/anyisland"
 	"github.com/nathfavour/autocommiter.go/internal/auth"
 	"github.com/nathfavour/autocommiter.go/internal/config"
 	"github.com/nathfavour/autocommiter.go/internal/git"
@@ -36,6 +37,9 @@ rootCmd = &cobra.Command{
 )
 
 func main() {
+	// Auto-register with Anyisland if available
+	anyisland.Register()
+
 	// Dynamically populate version info from build info
 	if info, ok := debug.ReadBuildInfo(); ok {
 		if info.Main.Version != "" && info.Main.Version != "(devel)" {
@@ -466,6 +470,13 @@ func main() {
 				color.Green("  Build From Source (Beta)")
 			} else {
 				color.Yellow("  Stable (Binary)")
+			}
+
+			color.Cyan("\nAnyisland Managed:")
+			if anyisland.IsManaged() {
+				color.Green("  Yes (Pulse Active)")
+			} else {
+				color.Red("  No")
 			}
 
 			color.Cyan("\nAuto-Update Enabled:")

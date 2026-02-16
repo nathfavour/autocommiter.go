@@ -1,0 +1,20 @@
+{
+  "name": "autocommiter",
+  "version": "1.0.0",
+  "description": "Auto-generate git commit messages using AI",
+  "repository": "github.com/nathfavour/autocommiter.go",
+  "build": {
+    "steps": [
+      "mkdir -p bin",
+      "CGO_ENABLED=0 go build -v -o bin/autocommiter ./cmd/autocommiter"
+    ],
+    "bin": "bin/autocommiter",
+    "toolchain": "go"
+  },
+  "runtime": {
+    "dependencies": [
+      "git"
+    ],
+    "pulse": true
+  }
+}
