@@ -123,17 +123,20 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	}
 	defer db.Close()
 
-	curr := repoRoot
+	abs, _ := filepath.Abs(repoRoot)
+	curr := abs
 	for {
 		repoHash := GetRepoHash(curr)
+		fmt.Printf("DEBUG: Checking Path=%s Hash=%s\n", curr, repoHash)
 		var user sql.NullString
 		err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
 		if err == nil && user.String != "" {
+			fmt.Printf("DEBUG: Found Match=%s\n", user.String)
 			return user.String, nil
 		}
 
 		parent := filepath.Dir(curr)
-		if parent == curr || parent == "." || parent == "/" {
+		if parent == curr || parent == "." || parent == "/" || parent == "" {
 			break
 		}
 		curr = parent
