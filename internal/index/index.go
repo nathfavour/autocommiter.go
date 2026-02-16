@@ -114,8 +114,14 @@ func SetDefaultUser(repoRoot string, user string) error {
 	defer db.Close()
 
 	repoHash := GetRepoHash(repoRoot)
-	// Use explicit REPLACE INTO to ensure all columns are handled
-	_, err = db.Exec("INSERT OR REPLACE INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?)",
+	// We use the handle as both the account_handle and default_user for consistency in manual setup
+	_, err = db.Exec(`
+		INSERT INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) 
+		VALUES (?, ?, ?, ?) 
+		ON CONFLICT(repo_path_hash) DO UPDATE SET 
+			default_user = excluded.default_user, 
+			account_handle = excluded.account_handle, 
+			last_used = excluded.last_used`,
 		repoHash, user, user, time.Now().Unix())
 	return err
 }
@@ -145,4 +151,25 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	}
 
 	return "", nil
+}
+
+func ListAllCache() {
+	db, err := InitDB()
+	if err != nil {
+		fmt.Printf("Error opening DB: %v\n", err)
+		return
+	}
+	defer db.Close()
+	rows, err := db.Query("SELECT repo_path_hash, account_handle, default_user FROM repo_cache")
+	if err != nil {
+		fmt.Printf("Error querying DB: %v\n", err)
+		return
+	}
+	defer rows.Close()
+	fmt.Printf("Listing all entries in repo_cache:\n")
+	for rows.Next() {
+		var hash, handle, def sql.NullString
+		rows.Scan(&hash, &handle, &def)
+		fmt.Printf("HASH: %s | HANDLE: %s | DEFAULT: %s\n", hash.String, handle.String, def.String)
+	}
 }
