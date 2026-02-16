@@ -13,6 +13,7 @@ import (
 	"github.com/nathfavour/autocommiter.go/internal/config"
 	"github.com/nathfavour/autocommiter.go/internal/git"
 	"github.com/nathfavour/autocommiter.go/internal/gitmoji"
+	"github.com/nathfavour/autocommiter.go/internal/index"
 	"github.com/nathfavour/autocommiter.go/internal/summarizer"
 )
 
@@ -66,11 +67,9 @@ func SetupUser(repoPath string, user string) error {
 			return fmt.Errorf("failed to switch to account %s: %v", user, err)
 		}
 
-		// 2. Save to local config
-		repoCfg, _ := config.LoadRepoConfig(repoRoot)
-		repoCfg.DefaultUser = &user
-		if err := config.SaveRepoConfig(repoRoot, repoCfg); err != nil {
-			return fmt.Errorf("failed to save repo config: %v", err)
+		// 2. Save to local index DB
+		if err := index.SetDefaultUser(repoRoot, user); err != nil {
+			return fmt.Errorf("failed to save default user: %v", err)
 		}
 
 		// 3. Sync Git Config

@@ -39,10 +39,9 @@ func (m *AccountManager) Wait() error {
 }
 
 func (m *AccountManager) discover() error {
-	// 1. Check for Default User in config
-	cfg, _ := config.LoadMergedConfig(m.repoRoot)
-	if cfg.DefaultUser != nil && *cfg.DefaultUser != "" {
-		m.targetAccount = *cfg.DefaultUser
+	// 1. Check for Default User in index DB
+	if defUser, err := index.GetDefaultUser(m.repoRoot); err == nil && defUser != "" {
+		m.targetAccount = defUser
 		return nil
 	}
 

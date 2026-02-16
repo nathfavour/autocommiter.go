@@ -1,10 +1,12 @@
 package index
 
 import (
+	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/nathfavour/autocommiter.go/internal/config"
 	_ "modernc.org/sqlite"
@@ -63,7 +65,8 @@ func InitDB() (*sql.DB, error) {
 		account_handle TEXT,
 		email TEXT,
 		name TEXT,
-		last_used INTEGER
+		last_used INTEGER,
+		default_user TEXT
 	);
 	CREATE TABLE IF NOT EXISTS gravity (
 		dir_path TEXT PRIMARY KEY,
@@ -80,5 +83,44 @@ func InitDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to init schema: %w", err)
 	}
 
+	// Migration: Add default_user column if it doesn't exist
+	_, _ = db.Exec("ALTER TABLE repo_cache ADD COLUMN default_user TEXT")
+
 	return db, nil
+}
+
+func GetRepoHash(repoRoot string) string {
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(repoRoot)))
+}
+
+func SetDefaultUser(repoRoot string, user string) error {
+	db, err := InitDB()
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	repoHash := GetRepoHash(repoRoot)
+	_, err = db.Exec("INSERT INTO repo_cache (repo_path_hash, default_user, last_used) VALUES (?, ?, ?) ON CONFLICT(repo_path_hash) DO UPDATE SET default_user = excluded.default_user, last_used = excluded.last_used",
+		repoHash, user, time.Now().Unix())
+	return err
+}
+
+func GetDefaultUser(repoRoot string) (string, error) {
+	db, err := InitDB()
+	if err != nil {
+		return "", err
+	}
+	defer db.Close()
+
+	repoHash := GetRepoHash(repoRoot)
+	var user sql.NullString
+	err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", nil
+		}
+		return "", err
+	}
+	return user.String, nil
 }
