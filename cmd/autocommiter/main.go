@@ -559,6 +559,17 @@ func main() {
 	uninstallCmd.Flags().BoolVar(&shouldClean, "clean", false, "Remove autocommiter binary and all configuration data")
 	rootCmd.AddCommand(uninstallCmd)
 
+	var applyChanges bool
+	var analyzeCmd = &cobra.Command{
+		Use:   "analyze",
+		Short: "Analyze and suggest account/config improvements",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return processor.AnalyzeRepo(repoPath, applyChanges)
+		},
+	}
+	analyzeCmd.Flags().BoolVarP(&applyChanges, "apply", "a", false, "Apply suggested changes automatically")
+	rootCmd.AddCommand(analyzeCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}

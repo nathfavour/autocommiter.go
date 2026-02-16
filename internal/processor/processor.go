@@ -97,6 +97,69 @@ func SetupUser(repoPath string, user string) error {
 	return nil
 }
 
+func AnalyzeRepo(repoPath string, applyChanges bool) error {
+	startDir := repoPath
+	if startDir == "" {
+		startDir = "."
+	}
+
+	repos := git.DiscoverRepositories(startDir)
+	if len(repos) == 0 {
+		return fmt.Errorf("no git repositories found in %s", startDir)
+	}
+
+	for _, repoRoot := range repos {
+		color.New(color.FgCyan, color.Bold).Printf("\n🔍 Analysis for: %s\n", repoRoot)
+
+		// 1. Current State
+		curName, curEmail := git.GetLocalIdentity(repoRoot)
+		curGH := auth.GetGithubUser()
+
+		fmt.Printf("Current Setup:\n")
+		fmt.Printf("  - Git Name:  %s\n", color.YellowString(curName))
+		fmt.Printf("  - Git Email: %s\n", color.YellowString(curEmail))
+		fmt.Printf("  - GH Account: %s\n", color.YellowString(curGH))
+
+		// 2. Discovery
+		accMgr := NewAccountManager(repoRoot)
+		accMgr.StartDiscovery()
+		if err := accMgr.Wait(); err != nil {
+			return fmt.Errorf("discovery failed: %v", err)
+		}
+
+		// To get name/email we might need to sync if they aren't in cache
+		// but we want to avoid switching GH account yet.
+		// Let's just report the handle first.
+		suggestedAcc := accMgr.TargetAccount
+
+		fmt.Printf("\nSuggested Setup:\n")
+		fmt.Printf("  - GH Account: %s\n", color.GreenString(suggestedAcc))
+
+		// Check if changes are needed
+		needsSwitch := curGH != suggestedAcc
+		
+		// If they aren't matched, we should probably check what the identity would be
+		if needsSwitch {
+			color.Yellow("\n⚠️  Configuration mismatch detected.")
+			if applyChanges {
+				color.Cyan("🚀 Applying suggested changes...")
+				if err := accMgr.Sync(); err != nil {
+					return fmt.Errorf("sync failed: %v", err)
+				}
+				newName, newEmail := git.GetLocalIdentity(repoRoot)
+				color.Green("✓ Successfully switched to %s", suggestedAcc)
+				color.Green("✓ Updated Git Identity to: %s <%s>", newName, newEmail)
+			} else {
+				color.Cyan("💡 Use 'analyze --apply' to automatically fix this.")
+			}
+		} else {
+			color.Green("\n✅ Configuration looks correct and consistent.")
+		}
+	}
+
+	return nil
+}
+
 func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("📂 Repository: %s", color.New(color.Bold).Sprint(repoRoot))
 
