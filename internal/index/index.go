@@ -123,25 +123,21 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	}
 	defer db.Close()
 
-	repoHash := GetRepoHash(repoRoot)
-	var user sql.NullString
-	err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", nil
+	curr := repoRoot
+	for {
+		repoHash := GetRepoHash(curr)
+		var user sql.NullString
+		err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
+		if err == nil && user.String != "" {
+			return user.String, nil
 		}
-		return "", err
-	}
-	return user.String, nil
-}
 
-func ListAllCache() {
-	db, _ := InitDB()
-	defer db.Close()
-	rows, _ := db.Query("SELECT repo_path_hash, account_handle, default_user FROM repo_cache")
-	for rows.Next() {
-		var hash, handle, def sql.NullString
-		rows.Scan(&hash, &handle, &def)
-		fmt.Printf("HASH: %s | HANDLE: %s | DEFAULT: %s\n", hash.String, handle.String, def.String)
+		parent := filepath.Dir(curr)
+		if parent == curr || parent == "." || parent == "/" {
+			break
+		}
+		curr = parent
 	}
+
+	return "", nil
 }
