@@ -101,8 +101,9 @@ func SetDefaultUser(repoRoot string, user string) error {
 	defer db.Close()
 
 	repoHash := GetRepoHash(repoRoot)
-	_, err = db.Exec("INSERT INTO repo_cache (repo_path_hash, default_user, last_used) VALUES (?, ?, ?) ON CONFLICT(repo_path_hash) DO UPDATE SET default_user = excluded.default_user, last_used = excluded.last_used",
-		repoHash, user, time.Now().Unix())
+	// We use the handle as both the account_handle and default_user for consistency in manual setup
+	_, err = db.Exec("INSERT INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?) ON CONFLICT(repo_path_hash) DO UPDATE SET default_user = excluded.default_user, account_handle = excluded.account_handle, last_used = excluded.last_used",
+		repoHash, user, user, time.Now().Unix())
 	return err
 }
 
