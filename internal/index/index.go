@@ -87,13 +87,8 @@ func InitDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to init schema: %w", err)
 	}
 
-	// Migration: Add default_user column if it doesn't exist
-	// We check if it exists first to avoid errors on some sqlite versions
-	var count int
-	_ = db.QueryRow("SELECT count(*) FROM pragma_table_info('repo_cache') WHERE name='default_user'").Scan(&count)
-	if count == 0 {
-		_, _ = db.Exec("ALTER TABLE repo_cache ADD COLUMN default_user TEXT")
-	}
+	// Migration: Ensure default_user column exists
+	_, _ = db.Exec("ALTER TABLE repo_cache ADD COLUMN default_user TEXT")
 
 	return db, nil
 }
@@ -114,15 +109,17 @@ func SetDefaultUser(repoRoot string, user string) error {
 	defer db.Close()
 
 	repoHash := GetRepoHash(repoRoot)
-	// We use the handle as both the account_handle and default_user for consistency in manual setup
-	_, err = db.Exec(`
-		INSERT INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) 
-		VALUES (?, ?, ?, ?) 
-		ON CONFLICT(repo_path_hash) DO UPDATE SET 
-			default_user = excluded.default_user, 
-			account_handle = excluded.account_handle, 
-			last_used = excluded.last_used`,
+	// Try a simple update first, then insert
+	_, err = db.Exec("UPDATE repo_cache SET default_user = ?, account_handle = ?, last_used = ? WHERE repo_path_hash = ?",
+		user, user, time.Now().Unix(), repoHash)
+	if err != nil {
+		return err
+	}
+
+	// Now try to insert if it doesn't exist
+	_, err = db.Exec("INSERT OR IGNORE INTO repo_cache (repo_path_hash, account_handle, default_user, last_used) VALUES (?, ?, ?, ?)",
 		repoHash, user, user, time.Now().Unix())
+	
 	return err
 }
 
