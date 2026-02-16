@@ -59,6 +59,10 @@ func InitDB() (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to open sqlite: %w", err)
 	}
 
+	// Performance and reliability optimizations
+	_, _ = db.Exec("PRAGMA journal_mode=WAL;")
+	_, _ = db.Exec("PRAGMA synchronous=NORMAL;")
+
 	schema := `
 	CREATE TABLE IF NOT EXISTS repo_cache (
 		repo_path_hash TEXT PRIMARY KEY,
@@ -127,11 +131,9 @@ func GetDefaultUser(repoRoot string) (string, error) {
 	curr := abs
 	for {
 		repoHash := GetRepoHash(curr)
-		fmt.Printf("DEBUG: Checking Path=%s Hash=%s\n", curr, repoHash)
 		var user sql.NullString
 		err = db.QueryRow("SELECT default_user FROM repo_cache WHERE repo_path_hash = ?", repoHash).Scan(&user)
 		if err == nil && user.String != "" {
-			fmt.Printf("DEBUG: Found Match=%s\n", user.String)
 			return user.String, nil
 		}
 
