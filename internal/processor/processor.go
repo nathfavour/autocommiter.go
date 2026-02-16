@@ -67,16 +67,17 @@ func SetupUser(repoPath string, user string) error {
 		}
 
 		// 2. Save to local config
-		repoCfg, _ := config.LoadMergedConfig(repoRoot)
+		repoCfg, _ := config.LoadRepoConfig(repoRoot)
 		repoCfg.DefaultUser = &user
 		if err := config.SaveRepoConfig(repoRoot, repoCfg); err != nil {
 			return fmt.Errorf("failed to save repo config: %v", err)
 		}
 
 		// 3. Sync Git Config
+		mergedCfg, _ := config.LoadMergedConfig(repoRoot)
 		preferNoReply := true
-		if repoCfg.PreferNoReplyEmail != nil {
-			preferNoReply = *repoCfg.PreferNoReplyEmail
+		if mergedCfg.PreferNoReplyEmail != nil {
+			preferNoReply = *mergedCfg.PreferNoReplyEmail
 		}
 
 		name, email, err := auth.GetAccountIdentity(preferNoReply)

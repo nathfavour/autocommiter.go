@@ -9,18 +9,18 @@ import (
 )
 
 type Config struct {
-	APIKey            *string  `json:"api_key"`
-	SelectedModel     *string  `json:"selected_model"`
-	EnableGitmoji     *bool    `json:"enable_gitmoji"`
-	UpdateGitignore   *bool    `json:"update_gitignore"`
-	SkipConfirmation  *bool    `json:"skip_confirmation"`
-	AutoUpdate        *bool    `json:"auto_update"`
-	BuildFromSource   *bool    `json:"build_from_source"`
-	PreferNoReplyEmail *bool    `json:"prefer_noreply_email"`
-	DefaultUser       *string  `json:"default_user"`
-	LastUpdateCheck   int64    `json:"last_update_check"`
-	LatestVersionFound string  `json:"latest_version_found"`
-	GitignorePatterns []string `json:"gitignore_patterns"`
+	APIKey            *string  `json:"api_key,omitempty"`
+	SelectedModel     *string  `json:"selected_model,omitempty"`
+	EnableGitmoji     *bool    `json:"enable_gitmoji,omitempty"`
+	UpdateGitignore   *bool    `json:"update_gitignore,omitempty"`
+	SkipConfirmation  *bool    `json:"skip_confirmation,omitempty"`
+	AutoUpdate        *bool    `json:"auto_update,omitempty"`
+	BuildFromSource   *bool    `json:"build_from_source,omitempty"`
+	PreferNoReplyEmail *bool    `json:"prefer_noreply_email,omitempty"`
+	DefaultUser       *string  `json:"default_user,omitempty"`
+	LastUpdateCheck   int64    `json:"last_update_check,omitempty"`
+	LatestVersionFound string  `json:"latest_version_found,omitempty"`
+	GitignorePatterns []string `json:"gitignore_patterns,omitempty"`
 }
 
 func DefaultConfig() Config {
@@ -176,6 +176,22 @@ func SaveConfig(config Config) error {
 	}
 
 	return os.WriteFile(configFile, content, 0644)
+}
+
+func LoadRepoConfig(repoRoot string) (Config, error) {
+	var repoCfg Config
+	if repoRoot == "" {
+		return repoCfg, nil
+	}
+
+	repoConfigPath := filepath.Join(repoRoot, ".autocommiter.json")
+	if _, err := os.Stat(repoConfigPath); err == nil {
+		content, err := os.ReadFile(repoConfigPath)
+		if err == nil {
+			_ = json.Unmarshal(content, &repoCfg)
+		}
+	}
+	return repoCfg, nil
 }
 
 func SaveRepoConfig(repoRoot string, config Config) error {

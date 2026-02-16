@@ -29,6 +29,7 @@ rootCmd = &cobra.Command{
 	repoPath string
 	noPush   bool
 	force    bool
+	user     string
 
 	// Version metadata fallbacks
 	version = "dev"
@@ -61,6 +62,12 @@ func main() {
 	}
 
 	rootCmd.Version = fmt.Sprintf("%s (%s, %s)", version, commit, date)
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		if user != "" && cmd.Name() != "fix" {
+			return processor.SetupUser(repoPath, user)
+		}
+		return nil
+	}
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		return processor.GenerateCommit(repoPath, noPush, force)
 	}
@@ -68,6 +75,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&repoPath, "repo", "r", "", "Path to git repository (defaults to current directory)")
 	rootCmd.PersistentFlags().BoolVarP(&noPush, "no-push", "n", false, "Skip pushing after commit")
 	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "Don't ask for confirmation before committing")
+	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Set default GitHub user for this repository")
 
 	var generateCmd = &cobra.Command{
 		Use:   "generate",
@@ -518,7 +526,6 @@ func main() {
 	}
 	rootCmd.AddCommand(versionCmd)
 
-	var userToFix string
 	var fixCmd = &cobra.Command{
 		Use:   "fix",
 		Short: "Repair the last commit with a different GitHub account",
@@ -527,10 +534,9 @@ func main() {
 			if path == "" {
 				path = "."
 			}
-			return processor.FixLastCommit(path, userToFix)
+			return processor.FixLastCommit(path, user)
 		},
 	}
-	fixCmd.Flags().StringVarP(&userToFix, "user", "u", "", "GitHub handle to switch to")
 	rootCmd.AddCommand(fixCmd)
 
 	var cleanCmd = &cobra.Command{
