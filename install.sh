@@ -57,25 +57,24 @@ echo "Downloading $BINARY_NAME ($LATEST_TAG)..."
 curl -fsSL "$DOWNLOAD_URL" -o autocommiter
 
 # Install binary
-SUDO=""
-INSTALL_DIR="/usr/local/bin"
-if [ ! -w "$INSTALL_DIR" ]; then
-    if [ -d "$HOME/.local/bin" ]; then
-        INSTALL_DIR="$HOME/.local/bin"
-    else
-        echo "Need sudo to install to /usr/local/bin"
-        SUDO="sudo"
-    fi
-fi
+INSTALL_DIR="$HOME/.local/bin"
 
 if [ ! -d "$INSTALL_DIR" ]; then
+    echo "Creating installation directory: $INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
 fi
 
-$SUDO mv autocommiter "$INSTALL_DIR/autocommiter"
-$SUDO chmod +x "$INSTALL_DIR/autocommiter"
+mv autocommiter "$INSTALL_DIR/autocommiter"
+chmod +x "$INSTALL_DIR/autocommiter"
 
 echo "Successfully installed autocommiter to $INSTALL_DIR/autocommiter"
+
+# Ensure the install dir is in PATH
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    echo "⚠️  Note: $INSTALL_DIR is not in your PATH."
+    echo "You may need to add it to your shell configuration (.bashrc, .zshrc, etc.):"
+    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+fi
 
 # Verify
 "$INSTALL_DIR/autocommiter" version || "$INSTALL_DIR/autocommiter" --help || true
