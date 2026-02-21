@@ -121,6 +121,30 @@ func GetRemoteOwner(cwd string) string {
 	return ""
 }
 
+func GetRepoName(cwd string) string {
+	url, err := RunGitCommand(cwd, "remote", "get-url", "origin")
+	if err != nil {
+		return ""
+	}
+	// Parse git@github.com:owner/repo.git or https://github.com/owner/repo.git
+	url = strings.TrimSuffix(url, ".git")
+	parts := strings.Split(url, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+	return ""
+}
+
+func SyncFork(cwd string, target string) error {
+	cmd := exec.Command("gh", "repo", "sync", target)
+	cmd.Dir = cwd
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("gh repo sync failed: %s, error: %w", string(output), err)
+	}
+	return nil
+}
+
 func SyncLocalConfig(cwd string, name string, email string) error {
 	if name != "" {
 		_, err := RunGitCommand(cwd, "config", "--local", "user.name", name)

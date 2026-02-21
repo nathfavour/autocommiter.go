@@ -17,6 +17,8 @@ type Config struct {
 	AutoUpdate        *bool    `json:"auto_update,omitempty"`
 	BuildFromSource   *bool    `json:"build_from_source,omitempty"`
 	PreferNoReplyEmail *bool    `json:"prefer_noreply_email,omitempty"`
+	EnableForkSync    *bool    `json:"enable_fork_sync,omitempty"`
+	ForkUsername      *string  `json:"fork_username,omitempty"`
 	LastUpdateCheck   int64    `json:"last_update_check,omitempty"`
 	LatestVersionFound string  `json:"latest_version_found,omitempty"`
 	GitignorePatterns []string `json:"gitignore_patterns,omitempty"`
@@ -31,6 +33,7 @@ func DefaultConfig() Config {
 	autoUpdate := true
 	buildFromSource := false
 	preferNoReplyEmail := true
+	enableForkSync := false
 
 	return Config{
 		APIKey:            &apiKey,
@@ -41,6 +44,7 @@ func DefaultConfig() Config {
 		AutoUpdate:        &autoUpdate,
 		BuildFromSource:   &buildFromSource,
 		PreferNoReplyEmail: &preferNoReplyEmail,
+		EnableForkSync:    &enableForkSync,
 		LastUpdateCheck:   0,
 		LatestVersionFound: "",
 		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
@@ -152,6 +156,12 @@ func mergeConfigs(base *Config, override Config) {
 	}
 	if override.PreferNoReplyEmail != nil {
 		base.PreferNoReplyEmail = override.PreferNoReplyEmail
+	}
+	if override.EnableForkSync != nil {
+		base.EnableForkSync = override.EnableForkSync
+	}
+	if override.ForkUsername != nil {
+		base.ForkUsername = override.ForkUsername
 	}
 	if len(override.GitignorePatterns) > 0 {
 		base.GitignorePatterns = override.GitignorePatterns

@@ -497,6 +497,21 @@ func main() {
 			} else {
 				color.Red("  No")
 			}
+
+			color.Cyan("\nFork Sync Enabled:")
+			forkSync := false
+			if cfg.EnableForkSync != nil {
+				forkSync = *cfg.EnableForkSync
+			}
+			if forkSync {
+				target := "Current User"
+				if cfg.ForkUsername != nil && *cfg.ForkUsername != "" {
+					target = *cfg.ForkUsername
+				}
+				color.Green("  Yes (Target: %s)", target)
+			} else {
+				color.Red("  No")
+			}
 		},
 	}
 	rootCmd.AddCommand(getConfigCmd)
@@ -569,6 +584,73 @@ func main() {
 	}
 	analyzeCmd.Flags().BoolVarP(&applyChanges, "apply", "a", false, "Apply suggested changes automatically")
 	rootCmd.AddCommand(analyzeCmd)
+
+	var syncCmd = &cobra.Command{
+		Use:   "sync [USER]",
+		Short: "Manually sync personal fork with upstream (requires 'gh' CLI)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			targetUser := ""
+			if len(args) > 0 {
+				targetUser = args[0]
+			}
+			return processor.SyncRepoFork(repoPath, targetUser)
+		},
+	}
+	rootCmd.AddCommand(syncCmd)
+
+	var toggleForkSyncCmd = &cobra.Command{
+		Use:   "toggle-fork-sync",
+		Short: "Enable/disable automatic fork syncing after push",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := false
+			if cfg.EnableForkSync != nil {
+				current = *cfg.EnableForkSync
+			}
+			newVal := !current
+			cfg.EnableForkSync = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ Fork Sync enabled")
+			} else {
+				color.Green("✓ Fork Sync %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleForkSyncCmd)
+
+	var setForkUserCmd = &cobra.Command{
+		Use:   "set-fork-user [USER]",
+		Short: "Set default target user for fork syncing",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var user string
+			if len(args) > 0 {
+				user = args[0]
+			} else {
+				fmt.Print(color.CyanString("Enter target GitHub username for forks: "))
+				reader := bufio.NewReader(os.Stdin)
+				user, _ = reader.ReadString('\n')
+				user = strings.TrimSpace(user)
+			}
+
+			if user == "" {
+				return fmt.Errorf("username cannot be empty")
+			}
+
+			cfg, _ := config.LoadConfig()
+			cfg.ForkUsername = &user
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+			color.Green("✓ Fork target user set to: %s", user)
+			return nil
+		},
+	}
+	rootCmd.AddCommand(setForkUserCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)

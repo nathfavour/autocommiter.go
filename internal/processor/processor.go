@@ -244,8 +244,34 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		color.Green("✓ Push successful!")
 	}
 
+	// Fork Sync (Optional)
+	if cfg.EnableForkSync != nil && *cfg.EnableForkSync {
+		targetUser := auth.GetGithubUser()
+		if cfg.ForkUsername != nil && *cfg.ForkUsername != "" {
+			targetUser = *cfg.ForkUsername
+		}
+
+		if targetUser != "" {
+			color.Cyan("🔄 Syncing fork for %s...", targetUser)
+			if err := SyncFork(repoRoot, targetUser); err != nil {
+				color.Yellow("⚠️ Fork sync failed: %v", err)
+			} else {
+				color.Green("✓ Fork synced successfully!")
+			}
+		}
+	}
+
 	color.Green("✓ Done with this repository!\n")
 	return nil
+}
+
+func SyncFork(repoRoot string, targetUser string) error {
+	repoName := git.GetRepoName(repoRoot)
+	if repoName == "" {
+		return fmt.Errorf("could not determine repository name")
+	}
+	target := fmt.Sprintf("%s/%s", targetUser, repoName)
+	return git.SyncFork(repoRoot, target)
 }
 
 func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
@@ -310,6 +336,45 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 	// If we tried everything and still failed, switch back to original or just return last error
 	_ = auth.SwitchAccount(activeUser)
 	return err
+}
+
+func SyncRepoFork(repoPath string, targetUser string) error {
+	startDir := repoPath
+	if startDir == "" {
+		startDir = "."
+	}
+
+	repos := git.DiscoverRepositories(startDir)
+	if len(repos) == 0 {
+		return fmt.Errorf("no git repositories found in %s", startDir)
+	}
+
+	for _, repo := range repos {
+		color.Cyan("📂 Syncing: %s", repo)
+		
+		userToSync := targetUser
+		if userToSync == "" {
+			// Try to get from config
+			cfg, _ := config.LoadMergedConfig(repo)
+			if cfg.ForkUsername != nil && *cfg.ForkUsername != "" {
+				userToSync = *cfg.ForkUsername
+			} else {
+				userToSync = auth.GetGithubUser()
+			}
+		}
+
+		if userToSync == "" {
+			color.Yellow("⚠️ Could not determine target user for sync. Skipping.")
+			continue
+		}
+
+		if err := SyncFork(repo, userToSync); err != nil {
+			color.Red("✗ Error syncing %s: %v", repo, err)
+		} else {
+			color.Green("✓ Successfully synced %s/%s", userToSync, git.GetRepoName(repo))
+		}
+	}
+	return nil
 }
 
 func GenerateMessage(repoRoot string, accMgr *AccountManager) (string, error) {
