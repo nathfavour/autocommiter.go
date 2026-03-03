@@ -166,29 +166,23 @@ func AnalyzeRepo(repoPath string, applyChanges bool) error {
 func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("📂 Repository: %s", color.New(color.Bold).Sprint(repoRoot))
 
-	// Start account discovery in background
-	accMgr := NewAccountManager(repoRoot)
-	accMgr.StartDiscovery()
-
-	// Ensure gitignore safety
+	// 1. Ensure gitignore safety (fast check)
 	color.Cyan("🛡️ Ensure .gitignore safety...")
 	if err := EnsureGitignoreSafety(repoRoot); err != nil {
 		return err
 	}
 
-	// Check for staged files first
+	// 2. Check for staged files
 	stagedFiles, err := git.GetStagedFiles(repoRoot)
 	if err != nil {
 		return err
 	}
 
 	if len(stagedFiles) == 0 {
-		// Stage changes only if nothing is staged
 		color.Cyan("📦 No changes staged. Staging all changes...")
 		if err := git.StageAllChanges(repoRoot); err != nil {
 			return err
 		}
-
 		stagedFiles, err = git.GetStagedFiles(repoRoot)
 		if err != nil {
 			return err
@@ -201,18 +195,15 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		color.Yellow("ℹ️ No changes to commit — Autocommit skipped.\n")
 		return nil
 	}
-	for _, file := range stagedFiles {
-		color.New(color.Faint).Printf("  - %s\n", file)
-	}
 
-	// Generate message
-	message, err := GenerateMessage(repoRoot, accMgr)
+	// 3. Generate message (Standard generation)
+	message, err := GenerateMessage(repoRoot, nil) // passing nil to skip proactive discovery
 	if err != nil {
 		return err
 	}
 	color.Cyan("💬 Message: %s", color.New(color.Italic).Sprint(message))
 
-	// Ask for confirmation
+	// 4. Confirmation (if not forced)
 	cfg, _ := config.LoadMergedConfig(repoRoot)
 	skipConf := false
 	if cfg.SkipConfirmation != nil {
@@ -229,22 +220,41 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		}
 	}
 
-	// Commit
+	// 5. Initial Commit attempt
 	color.Cyan("✍️ Committing changes...")
 	if err := git.CommitWithMessage(repoRoot, message); err != nil {
 		return err
 	}
 	color.Green("✓ Commit successful!")
 
-	// Push
+	// 6. Push with reactive account discovery on failure
 	if !noPush {
 		color.Cyan("🚀 Pushing to remote...")
-		if err := PushWithRetry(repoRoot, accMgr); err != nil {
-			return err
+		if err := git.PushChanges(repoRoot); err != nil {
+			// REACTIVE DISCOVERY: Only trigger discovery if the push fails
+			color.Yellow("⚠️ Initial push failed: %v", err)
+			color.Cyan("🔍 Attempting reactive account discovery...")
+
+			accMgr := NewAccountManager(repoRoot)
+			accMgr.StartDiscovery()
+			if waitErr := accMgr.Wait(); waitErr == nil {
+				if syncErr := accMgr.Sync(); syncErr == nil {
+					color.Green("✓ Switched to discovered account: %s", accMgr.TargetAccount)
+					// Retry push with the new account logic
+					if retryErr := PushWithRetry(repoRoot, accMgr); retryErr == nil {
+						color.Green("✓ Push successful after reactive discovery!")
+						goto end
+					} else {
+						return retryErr
+					}
+				}
+			}
+			return err // Return original error if discovery didn't help
 		}
 		color.Green("✓ Push successful!")
 	}
 
+end:
 	// Fork Sync (Optional)
 	if cfg.EnableForkSync != nil && *cfg.EnableForkSync {
 		targetUser := auth.GetGithubUser()
