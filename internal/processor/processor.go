@@ -15,6 +15,7 @@ import (
 	"github.com/nathfavour/autocommiter.go/internal/gitmoji"
 	"github.com/nathfavour/autocommiter.go/internal/index"
 	"github.com/nathfavour/autocommiter.go/internal/summarizer"
+	"time"
 )
 
 func GenerateCommit(repoPath string, noPush bool, force bool) error {
@@ -139,7 +140,7 @@ func AnalyzeRepo(repoPath string, applyChanges bool) error {
 
 		// Check if changes are needed
 		needsSwitch := curGH != suggestedAcc
-		
+
 		// If they aren't matched, we should probably check what the identity would be
 		if needsSwitch {
 			color.Yellow("\n⚠️  Configuration mismatch detected.")
@@ -187,7 +188,7 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		if err := git.StageAllChanges(repoRoot); err != nil {
 			return err
 		}
-		
+
 		stagedFiles, err = git.GetStagedFiles(repoRoot)
 		if err != nil {
 			return err
@@ -312,7 +313,7 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 
 			if name, email, login, identErr := auth.GetAccountIdentity(preferNoReply); identErr == nil {
 				_ = git.SyncLocalConfig(repoRoot, name, email)
-				
+
 				// Re-amend to fix authorship if we switched accounts
 				authorStr := fmt.Sprintf("%s <%s>", name, email)
 				_, _ = git.RunGitCommand(repoRoot, "commit", "--amend", "--no-edit", "--author", authorStr)
@@ -320,13 +321,13 @@ func PushWithRetry(repoRoot string, accMgr *AccountManager) error {
 				if retryErr := git.PushChanges(repoRoot); retryErr == nil {
 					// Success! Cache this for next time
 					accMgr.CacheAccount(login, email, name)
-					
+
 					// IMPORTANT: If we had a default user set that failed, update it to the one that worked
 					if defUser, _ := index.GetDefaultUser(repoRoot); defUser != "" {
 						color.Cyan("💡 Updating default user to %s since it has push access", login)
 						_ = index.SetDefaultUser(repoRoot, login)
 					}
-					
+
 					return nil
 				}
 			}
@@ -351,7 +352,7 @@ func SyncRepoFork(repoPath string, targetUser string) error {
 
 	for _, repo := range repos {
 		color.Cyan("📂 Syncing: %s", repo)
-		
+
 		userToSync := targetUser
 		if userToSync == "" {
 			// Try to get from config
@@ -385,12 +386,22 @@ func GenerateMessage(repoRoot string, accMgr *AccountManager) (string, error) {
 		apiKey = *cfg.APIKey
 	}
 
-	// Wait for account discovery to finish
+	// Wait for account discovery to finish (give it a bit of time but don't hang forever)
 	if accMgr != nil {
-		if err := accMgr.Wait(); err == nil {
-			if err := accMgr.Sync(); err != nil {
-				color.Yellow("⚠️ Account sync warning: %v", err)
+		waitChan := make(chan error, 1)
+		go func() {
+			waitChan <- accMgr.Wait()
+		}()
+
+		select {
+		case err := <-waitChan:
+			if err == nil {
+				if err := accMgr.Sync(); err != nil {
+					color.Yellow("⚠️ Account sync warning: %v", err)
+				}
 			}
+		case <-time.After(5 * time.Second):
+			color.Yellow("⚠️ Account discovery timed out (background processing still active)")
 		}
 	}
 
@@ -425,7 +436,7 @@ func TryAPIGeneration(repoRoot string, apiKey string, cfg config.Config) (string
 		fileNamesList = append(fileNamesList, fc.File)
 	}
 	fileNames := strings.Join(fileNamesList, "\n")
-	
+
 	// Increased limit from 400 to 12000 to give the LLM much more context
 	compressedJSON := summarizer.CompressToJSON(fileChanges, 12000)
 
