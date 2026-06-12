@@ -13,15 +13,17 @@ Use this skill when modifying the Autocommiter codebase or setting up a develope
 - This ensures that `autocommiter update` compiles the latest source instead of downloading a binary.
 
 #### 2. Building and Testing
-- Build: `go build -o autocommiter ./cmd/autocommiter`
+- Build: `go build -o autocommiter ./cmd/autocommiter` (Remember: per `AGENTS.md`, always build into `bin/` for final binaries: `go build -o bin/autocommiter ./cmd/autocommiter`).
 - Test: `go test ./internal/...`
 
 #### 3. Internal Architecture
-- **Inference**: Logic in `internal/api` and `internal/summarizer`.
-- **Auth**: Logic in `internal/auth` and `internal/processor/account.go`.
-- **Database**: SQLite index managed in `internal/index`.
-- **Networking**: Custom resolver in `internal/netutil` for Termux/cross-platform resilience.
+- **Inference (`internal/api`, `internal/summarizer`)**: Compresses git diffs (up to 12,000 chars) and calls the GitHub Models API.
+- **Auth & Account Mgmt (`internal/auth`, `internal/processor/account.go`)**: Manages identity switching via `gh` CLI and reactive push recovery.
+- **Database (`internal/index`)**: SQLite index at `~/.autocommiter/index.db`. Uses SHA256 hashes of repo paths. Features "Gravity" weights for account discovery.
+- **Networking (`internal/netutil`)**: Custom HTTP client with timeout and resilience for various environments (including Termux).
+- **Anyisland (`internal/anyisland`)**: UDP-based auto-registration and Unix-socket-based management status.
 
 ### Development Resources
 - `ARCHITECTURE.md`: Technical overview.
 - `TODO.md`: Roadmap and pending tasks.
+- `CONTRIBUTING.md`: Guidelines for PRs and issues.

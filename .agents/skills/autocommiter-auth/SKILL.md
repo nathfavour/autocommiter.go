@@ -9,10 +9,11 @@ Use this skill when the user needs to switch between multiple GitHub accounts or
 ### Workflows
 
 #### 1. Account Discovery Heuristics
-Autocommiter uses a multi-stage discovery process to find the right account for a repo:
-1. **Default User**: Checks the SQLite index for a manual override.
-2. **Gravity**: Checks if a parent directory name matches a logged-in account.
+Autocommiter uses a multi-stage discovery process to find the right account for a repo, leveraging a **SQLite index** (`~/.autocommiter/index.db`):
+1. **Default User**: Checks the index for a manual override (hased by repo path).
+2. **Gravity**: Uses "Gravity" weights stored in the DB to associate directory paths with specific accounts.
 3. **Affinity**: Checks history identity, local Git config, and remote owner.
+- **Security**: Repository paths are hashed using **SHA256** before being stored in the database for privacy.
 
 #### 2. User/Account Repair
 - Use `autocommiter fix --user <username>` to repair the last commit.

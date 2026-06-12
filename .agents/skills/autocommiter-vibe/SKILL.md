@@ -11,10 +11,14 @@ Use this skill when the project is being used within the Anyisland ecosystem or 
 #### 1. Manifest Generation
 - Use `autocommiter vibe-manifest` to output the tool's capabilities in a format compatible with `vibeauracle`.
 - This includes schema definitions for `generate_commit_message` and `summarize_changes`.
+- **Manifest Fields**: `id`, `name`, `repo`, `version`, `description`, `protocol` (stdio), `command`, `update_cmd`, `inbuilt`, `tool_set`.
 
 #### 2. Tool Execution
 - Use `autocommiter execute [tool] [args]` to run autocommiter functions in "vibe mode" (JSON-in, JSON-out).
-- Supported tools: `generate_commit_message`, `summarize_changes`.
+- **Supported Tools**:
+    - `generate_commit_message`: Takes `repo_path` (string).
+    - `summarize_changes`: Takes `repo_path` (string).
+- **Output Format**: Returns a JSON object with `content` (string) and `status` ("success" or "error").
 
 ### Key Commands
 - `autocommiter vibe-manifest`
