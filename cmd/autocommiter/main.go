@@ -17,7 +17,6 @@ import (
 	"github.com/nathfavour/autocommiter.go/internal/git"
 	"github.com/nathfavour/autocommiter.go/internal/models"
 	"github.com/nathfavour/autocommiter.go/internal/processor"
-	"github.com/nathfavour/autocommiter.go/internal/updater"
 	"github.com/spf13/cobra"
 )
 
@@ -57,9 +56,6 @@ func main() {
 	}
 
 	cfg, _ := config.LoadConfig()
-	if cfg.AutoUpdate != nil && *cfg.AutoUpdate {
-		updater.CheckForUpdates(version)
-	}
 
 	rootCmd.Version = fmt.Sprintf("%s (%s, %s)", version, commit, date)
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
@@ -378,31 +374,6 @@ func main() {
 	}
 	rootCmd.AddCommand(toggleSkipConfirmationCmd)
 
-	var toggleAutoUpdateCmd = &cobra.Command{
-		Use:   "toggle-auto-update",
-		Short: "Enable/disable automatic update checks",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ := config.LoadConfig()
-			current := true
-			if cfg.AutoUpdate != nil {
-				current = *cfg.AutoUpdate
-			}
-			newVal := !current
-			cfg.AutoUpdate = &newVal
-			if err := config.SaveConfig(cfg); err != nil {
-				return err
-			}
-
-			if newVal {
-				color.Green("✓ Auto-update checks enabled")
-			} else {
-				color.Green("✓ Auto-update checks %s", color.YellowString("disabled"))
-			}
-			return nil
-		},
-	}
-	rootCmd.AddCommand(toggleAutoUpdateCmd)
-
 	var getConfigCmd = &cobra.Command{
 		Use:   "get-config",
 		Short: "Display current configuration",
@@ -469,31 +440,9 @@ func main() {
 				color.Red("  No")
 			}
 
-			color.Cyan("\nUpdate Channel:")
-			buildFromSource := false
-			if cfg.BuildFromSource != nil {
-				buildFromSource = *cfg.BuildFromSource
-			}
-			if buildFromSource {
-				color.Green("  Build From Source (Beta)")
-			} else {
-				color.Yellow("  Stable (Binary)")
-			}
-
 			color.Cyan("\nAnyisland Managed:")
 			if anyisland.IsManaged() {
 				color.Green("  Yes (Pulse Active)")
-			} else {
-				color.Red("  No")
-			}
-
-			color.Cyan("\nAuto-Update Enabled:")
-			auto := true
-			if cfg.AutoUpdate != nil {
-				auto = *cfg.AutoUpdate
-			}
-			if auto {
-				color.Green("  Yes")
 			} else {
 				color.Red("  No")
 			}
@@ -654,11 +603,6 @@ func main() {
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
-	}
-
-	// Automatic update after command execution
-	if cfg.AutoUpdate != nil && *cfg.AutoUpdate {
-		updater.AutoUpdate(version)
 	}
 }
 

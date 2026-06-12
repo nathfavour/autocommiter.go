@@ -8,9 +8,8 @@ Use this skill when modifying the Autocommiter codebase or setting up a develope
 
 ### Workflows
 
-#### 1. Dev Mode Detection
-- Autocommiter automatically enables `build_from_source` if it detects both `go` and `git` in the environment.
-- This ensures that `autocommiter update` compiles the latest source instead of downloading a binary.
+#### 1. Dev Mode
+- Developers can build the tool from source to test changes immediately.
 
 #### 2. Building and Testing
 - Build: `go build -o autocommiter ./cmd/autocommiter` (Remember: per `AGENTS.md`, always build into `bin/` for final binaries: `go build -o bin/autocommiter ./cmd/autocommiter`).

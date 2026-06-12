@@ -20,6 +20,7 @@ Use this skill when diagnosing integration issues with Anyisland or when managin
 
 #### 3. Anyisland Pulse
 - When managed, Autocommiter can receive heartbeats or instructions from the Pulse daemon, ensuring it stays updated and correctly configured within the island.
+- **Updates**: Anyisland Pulse centralizes update orchestration, replacing the need for internal update logic in the binary.
 
 ### Key Components
 - `internal/anyisland/anyisland.go`: Core registration and status logic.

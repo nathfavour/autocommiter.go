@@ -43,7 +43,6 @@ go build -o autocommiter ./cmd/autocommiter
 ### ⚙️ Config
 - `autocommiter toggle-gitmoji` - Enable/disable emojis ✨
 - `autocommiter select-model` - Choose your favorite AI model
-- `autocommiter toggle-auto-update` - Keep it fresh
 
 #### 📁 Project-level Config
 You can also create a `.autocommiter.json` in your repository root to override global settings for a specific project:

@@ -25,7 +25,6 @@ Use this skill when the user wants to change settings, update API keys, or switc
 #### 4. Preference Toggling
 - `autocommiter toggle-gitmoji`: Enable/disable ✨ emojis.
 - `autocommiter toggle-skip-confirmation`: Skip "Proceed with commit?" prompts.
-- `autocommiter toggle-auto-update`: Background update checks.
 - `autocommiter toggle-fork-sync`: Sync fork after push.
 
 ### Key Commands

@@ -26,7 +26,6 @@ var vibeManifestCmd = &cobra.Command{
 			"description": "Auto-generate git commit messages using AI",
 			"protocol":    "stdio",
 			"command":     "autocommiter",
-			"update_cmd":  "autocommiter update",
 			"inbuilt":     true,
 			"tool_set": []map[string]interface{}{
 				{

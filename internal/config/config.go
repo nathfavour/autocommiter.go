@@ -4,24 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
 type Config struct {
-	APIKey            *string  `json:"api_key,omitempty"`
-	SelectedModel     *string  `json:"selected_model,omitempty"`
-	EnableGitmoji     *bool    `json:"enable_gitmoji,omitempty"`
-	UpdateGitignore   *bool    `json:"update_gitignore,omitempty"`
-	SkipConfirmation  *bool    `json:"skip_confirmation,omitempty"`
-	AutoUpdate        *bool    `json:"auto_update,omitempty"`
-	BuildFromSource   *bool    `json:"build_from_source,omitempty"`
+	APIKey             *string  `json:"api_key,omitempty"`
+	SelectedModel      *string  `json:"selected_model,omitempty"`
+	EnableGitmoji      *bool    `json:"enable_gitmoji,omitempty"`
+	UpdateGitignore    *bool    `json:"update_gitignore,omitempty"`
+	SkipConfirmation   *bool    `json:"skip_confirmation,omitempty"`
 	PreferNoReplyEmail *bool    `json:"prefer_noreply_email,omitempty"`
-	EnableForkSync    *bool    `json:"enable_fork_sync,omitempty"`
-	ForkUsername      *string  `json:"fork_username,omitempty"`
-	LastUpdateCheck   int64    `json:"last_update_check,omitempty"`
-	LatestVersionFound string  `json:"latest_version_found,omitempty"`
-	GitignorePatterns []string `json:"gitignore_patterns,omitempty"`
+	EnableForkSync     *bool    `json:"enable_fork_sync,omitempty"`
+	ForkUsername       *string  `json:"fork_username,omitempty"`
+	GitignorePatterns  []string `json:"gitignore_patterns,omitempty"`
 }
 
 func DefaultConfig() Config {
@@ -30,24 +25,18 @@ func DefaultConfig() Config {
 	enableGitmoji := false
 	updateGitignore := false
 	skipConfirmation := false
-	autoUpdate := true
-	buildFromSource := false
 	preferNoReplyEmail := true
 	enableForkSync := false
 
 	return Config{
-		APIKey:            &apiKey,
-		SelectedModel:     &selectedModel,
-		EnableGitmoji:     &enableGitmoji,
-		UpdateGitignore:   &updateGitignore,
-		SkipConfirmation:  &skipConfirmation,
-		AutoUpdate:        &autoUpdate,
-		BuildFromSource:   &buildFromSource,
+		APIKey:             &apiKey,
+		SelectedModel:      &selectedModel,
+		EnableGitmoji:      &enableGitmoji,
+		UpdateGitignore:    &updateGitignore,
+		SkipConfirmation:   &skipConfirmation,
 		PreferNoReplyEmail: &preferNoReplyEmail,
-		EnableForkSync:    &enableForkSync,
-		LastUpdateCheck:   0,
-		LatestVersionFound: "",
-		GitignorePatterns: []string{"*.env*", ".env*", "docx/", ".docx/"},
+		EnableForkSync:     &enableForkSync,
+		GitignorePatterns:  []string{"*.env*", ".env*", "docx/", ".docx/"},
 	}
 }
 
@@ -93,18 +82,6 @@ func LoadConfig() (Config, error) {
 		}
 	}
 
-	// Opinionated Detection: If both go and git are installed, this is a developer environment.
-	_, errGo := exec.LookPath("go")
-	_, errGit := exec.LookPath("git")
-	if errGo == nil && errGit == nil {
-		// Automatically enable build from source if not already set
-		if cfg.BuildFromSource == nil || !*cfg.BuildFromSource {
-			val := true
-			cfg.BuildFromSource = &val
-			_ = SaveConfig(cfg)
-		}
-	}
-
 	return cfg, nil
 }
 
@@ -147,12 +124,6 @@ func mergeConfigs(base *Config, override Config) {
 	}
 	if override.SkipConfirmation != nil {
 		base.SkipConfirmation = override.SkipConfirmation
-	}
-	if override.AutoUpdate != nil {
-		base.AutoUpdate = override.AutoUpdate
-	}
-	if override.BuildFromSource != nil {
-		base.BuildFromSource = override.BuildFromSource
 	}
 	if override.PreferNoReplyEmail != nil {
 		base.PreferNoReplyEmail = override.PreferNoReplyEmail
