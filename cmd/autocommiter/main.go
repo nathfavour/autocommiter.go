@@ -55,8 +55,6 @@ func main() {
 		}
 	}
 
-	cfg, _ := config.LoadConfig()
-
 	rootCmd.Version = fmt.Sprintf("%s (%s, %s)", version, commit, date)
 	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if user != "" && cmd.Name() != "fix" {
