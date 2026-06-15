@@ -12,6 +12,7 @@ type Config struct {
 	SelectedModel      *string  `json:"selected_model,omitempty"`
 	EnableGitmoji      *bool    `json:"enable_gitmoji,omitempty"`
 	UpdateGitignore    *bool    `json:"update_gitignore,omitempty"`
+	SecureMode         *bool    `json:"secure_mode,omitempty"`
 	SkipConfirmation   *bool    `json:"skip_confirmation,omitempty"`
 	PreferNoReplyEmail *bool    `json:"prefer_noreply_email,omitempty"`
 	EnableForkSync     *bool    `json:"enable_fork_sync,omitempty"`
@@ -24,6 +25,7 @@ func DefaultConfig() Config {
 	selectedModel := "gpt-4o-mini"
 	enableGitmoji := false
 	updateGitignore := false
+	secureMode := true
 	skipConfirmation := false
 	preferNoReplyEmail := true
 	enableForkSync := false
@@ -33,6 +35,7 @@ func DefaultConfig() Config {
 		SelectedModel:      &selectedModel,
 		EnableGitmoji:      &enableGitmoji,
 		UpdateGitignore:    &updateGitignore,
+		SecureMode:         &secureMode,
 		SkipConfirmation:   &skipConfirmation,
 		PreferNoReplyEmail: &preferNoReplyEmail,
 		EnableForkSync:     &enableForkSync,
