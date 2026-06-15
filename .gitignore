@@ -31,3 +31,6 @@ Thumbs.db
 # GoReleaser
 dist/
 bin/
+
+# Added by Autocommiter SECURE_MODE:
+.test.env
