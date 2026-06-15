@@ -372,6 +372,31 @@ func main() {
 	}
 	rootCmd.AddCommand(toggleSkipConfirmationCmd)
 
+	var toggleSecureModeCmd = &cobra.Command{
+		Use:   "toggle-secure-mode",
+		Short: "Enable/disable SECURE_MODE (detect sensitive/bulky files)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := true
+			if cfg.SecureMode != nil {
+				current = *cfg.SecureMode
+			}
+			newVal := !current
+			cfg.SecureMode = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ SECURE_MODE enabled")
+			} else {
+				color.Green("✓ SECURE_MODE %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleSecureModeCmd)
+
 	var getConfigCmd = &cobra.Command{
 		Use:   "get-config",
 		Short: "Display current configuration",
@@ -433,6 +458,17 @@ func main() {
 				skip = *cfg.SkipConfirmation
 			}
 			if skip {
+				color.Green("  Yes")
+			} else {
+				color.Red("  No")
+			}
+
+			color.Cyan("\nSECURE_MODE Enabled:")
+			secure := true
+			if cfg.SecureMode != nil {
+				secure = *cfg.SecureMode
+			}
+			if secure {
 				color.Green("  Yes")
 			} else {
 				color.Red("  No")

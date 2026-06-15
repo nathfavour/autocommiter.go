@@ -10,6 +10,7 @@ Use this skill when the user wants to generate commit messages, stage changes, o
 
 #### 1. Generate and Apply Commit
 - Ensure changes are staged (or let `autocommiter` handle it).
+- **SECURE_MODE**: By default, Autocommiter scans staged files for sensitive data (e.g., `.env`, private keys) and unusually large binaries. If detected, they are automatically added to `.gitignore` and unstaged to prevent security leaks.
 - Run `autocommiter generate` to generate a message and commit.
 - Use `--no-push` if the user doesn't want to push immediately.
 - Use `--force` to skip the confirmation prompt.

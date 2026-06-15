@@ -217,7 +217,6 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 	color.Cyan("💬 Message: %s", color.New(color.Italic).Sprint(message))
 
 	// 4. Confirmation (if not forced)
-	cfg, _ := config.LoadMergedConfig(repoRoot)
 	skipConf := false
 	if cfg.SkipConfirmation != nil {
 		skipConf = *cfg.SkipConfirmation
