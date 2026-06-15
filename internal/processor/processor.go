@@ -172,7 +172,20 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 		return err
 	}
 
-	// 2. Check for staged files
+	// 2. SECURE_MODE: Check for sensitive/bulky files
+	cfg, _ := config.LoadMergedConfig(repoRoot)
+	if cfg.SecureMode == nil || *cfg.SecureMode {
+		color.Cyan("🔒 SECURE_MODE: Scanning staged files for security leaks...")
+		insecureFiles, err := RunSecurityCheck(repoRoot)
+		if err != nil {
+			return err
+		}
+		if len(insecureFiles) > 0 {
+			color.Green("✓ Security check completed. Insecure files removed from staging.")
+		}
+	}
+
+	// 3. Check for staged files
 	stagedFiles, err := git.GetStagedFiles(repoRoot)
 	if err != nil {
 		return err
