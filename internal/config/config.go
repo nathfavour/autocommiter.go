@@ -13,6 +13,8 @@ type Config struct {
 	EnableGitmoji      *bool    `json:"enable_gitmoji,omitempty"`
 	UpdateGitignore    *bool    `json:"update_gitignore,omitempty"`
 	SecureMode         *bool    `json:"secure_mode,omitempty"`
+	SecureDetectPII    *bool    `json:"secure_detect_pii,omitempty"`
+	SecureDetectBulky  *bool    `json:"secure_detect_bulky,omitempty"`
 	SkipConfirmation   *bool    `json:"skip_confirmation,omitempty"`
 	PreferNoReplyEmail *bool    `json:"prefer_noreply_email,omitempty"`
 	EnableForkSync     *bool    `json:"enable_fork_sync,omitempty"`
@@ -38,6 +40,8 @@ func DefaultConfig() Config {
 		EnableGitmoji:      &enableGitmoji,
 		UpdateGitignore:    &updateGitignore,
 		SecureMode:         &secureMode,
+		SecureDetectPII:    &secureDetectPII,
+		SecureDetectBulky:  &secureDetectBulky,
 		SkipConfirmation:   &skipConfirmation,
 		PreferNoReplyEmail: &preferNoReplyEmail,
 		EnableForkSync:     &enableForkSync,
@@ -204,11 +208,5 @@ func SetSelectedModel(model string) error {
 		return err
 	}
 	config.SelectedModel = &model
-	return SaveConfig(config)
-}
-
-	return SaveConfig(config)
-}
-SelectedModel = &model
 	return SaveConfig(config)
 }
