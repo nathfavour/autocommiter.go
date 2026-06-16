@@ -18,7 +18,7 @@ import (
 	"time"
 )
 
-func GenerateCommit(repoPath string, noPush bool, force bool) error {
+func GenerateCommit(repoPath string, noPush bool, noSecure bool, force bool) error {
 	startDir := repoPath
 	if startDir == "" {
 		startDir = "."
@@ -36,7 +36,7 @@ func GenerateCommit(repoPath string, noPush bool, force bool) error {
 	}
 
 	for _, repo := range repos {
-		if err := ProcessSingleRepo(repo, noPush, force); err != nil {
+		if err := ProcessSingleRepo(repo, noPush, noSecure, force); err != nil {
 			color.Red("✗ Error processing %s: %v\n", repo, err)
 		}
 	}

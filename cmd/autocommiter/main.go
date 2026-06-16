@@ -705,6 +705,13 @@ func main() {
 	}
 }
 
+func formatBool(b bool) string {
+	if b {
+		return color.GreenString("Yes")
+	}
+	return color.RedString("No")
+}
+
 func performClean() error {
 	// Clean up application data directory
 	dataDir, _ := config.GetDataDir()
