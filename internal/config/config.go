@@ -127,6 +127,15 @@ func mergeConfigs(base *Config, override Config) {
 	if override.UpdateGitignore != nil {
 		base.UpdateGitignore = override.UpdateGitignore
 	}
+	if override.SecureMode != nil {
+		base.SecureMode = override.SecureMode
+	}
+	if override.SecureDetectPII != nil {
+		base.SecureDetectPII = override.SecureDetectPII
+	}
+	if override.SecureDetectBulky != nil {
+		base.SecureDetectBulky = override.SecureDetectBulky
+	}
 	if override.SkipConfirmation != nil {
 		base.SkipConfirmation = override.SkipConfirmation
 	}

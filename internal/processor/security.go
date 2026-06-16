@@ -9,12 +9,28 @@ import (
 	"strings"
 
 	"github.com/fatih/color"
+	"github.com/nathfavour/autocommiter.go/internal/config"
 	"github.com/nathfavour/autocommiter.go/internal/git"
+	"regexp"
 )
 
 const (
 	MaxCodeFileSize = 2 * 1024 * 1024 // 2MB
 	BinaryThreshold = 5 * 1024 * 1024 // 5MB
+)
+
+type LeakMatch struct {
+	File    string
+	Line    int
+	Content string
+	Type    string
+}
+
+var (
+	emailRegex    = regexp.MustCompile(`(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}`)
+	apiKeyRegex   = regexp.MustCompile(`(?i)(?:key|token|secret|password|auth|api)[a-z0-9_]*["']?\s*[:=]\s*["']?([a-zA-Z0-9-._~+/]{32,})["']?`)
+	awsKeyRegex   = regexp.MustCompile(`(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}`)
+	stripeKeyRegex = regexp.MustCompile(`sk_live_[0-9a-zA-Z]{24}`)
 )
 
 var sensitivePatterns = []string{
@@ -34,12 +50,14 @@ var sensitivePatterns = []string{
 }
 
 func RunSecurityCheck(repoRoot string) ([]string, error) {
+	cfg, _ := config.LoadMergedConfig(repoRoot)
 	stagedFiles, err := git.GetStagedFiles(repoRoot)
 	if err != nil {
 		return nil, err
 	}
 
 	var insecureFiles []string
+	var leaks []LeakMatch
 
 	for _, file := range stagedFiles {
 		fullPath := filepath.Join(repoRoot, file)
@@ -48,9 +66,40 @@ func RunSecurityCheck(repoRoot string) ([]string, error) {
 			continue
 		}
 
-		if isInsecure(file, fullPath, info) {
-			insecureFiles = append(insecureFiles, file)
+		// 1. Check for sensitive/bulky files
+		detectBulky := true
+		if cfg.SecureDetectBulky != nil {
+			detectBulky = *cfg.SecureDetectBulky
 		}
+
+		if detectBulky && isInsecure(file, fullPath, info) {
+			insecureFiles = append(insecureFiles, file)
+			continue
+		}
+
+		// 2. Check for PII/Leaks in code diffs
+		detectPII := true
+		if cfg.SecureDetectPII != nil {
+			detectPII = *cfg.SecureDetectPII
+		}
+
+		if detectPII && info.Size() < MaxCodeFileSize {
+			fileLeaks, _ := scanFileForLeaks(repoRoot, file)
+			if len(fileLeaks) > 0 {
+				leaks = append(leaks, fileLeaks...)
+			}
+		}
+	}
+
+	if len(leaks) > 0 {
+		color.Red("\n🚨 SECURE_MODE: Potential PII or Secrets detected in code diffs:")
+		for _, leak := range leaks {
+			color.Yellow("   - %s:%d [%s]: %s", leak.File, leak.Line, leak.Type, color.New(color.Faint).Sprint(leak.Content))
+		}
+		color.Cyan("\n🛡️  Action Required: Please review these lines for sensitive data.")
+		color.Cyan("👉 To skip this check for this run, use --no-secure")
+		color.Cyan("👉 To disable this permanently, use 'autocommiter toggle-secure-pii'")
+		return nil, fmt.Errorf("security check failed: PII/Leaks detected")
 	}
 
 	if len(insecureFiles) > 0 {
@@ -68,6 +117,43 @@ func RunSecurityCheck(repoRoot string) ([]string, error) {
 	}
 
 	return insecureFiles, nil
+}
+
+func scanFileForLeaks(repoRoot string, file string) ([]LeakMatch, error) {
+	diff, err := git.GetStagedDiffUnified(repoRoot, file)
+	if err != nil {
+		return nil, err
+	}
+
+	var leaks []LeakMatch
+	lines := strings.Split(diff, "\n")
+	currentLine := 0
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "@@") {
+			// Parse chunk header to get line number if needed, but for now simple
+			continue
+		}
+		if !strings.HasPrefix(line, "+") || strings.HasPrefix(line, "+++") {
+			continue
+		}
+
+		content := strings.TrimPrefix(line, "+")
+		currentLine++ // This is naive, but works for identifying relative position
+
+		if awsKeyRegex.MatchString(content) {
+			leaks = append(leaks, LeakMatch{File: file, Line: currentLine, Content: content, Type: "AWS Key"})
+		} else if stripeKeyRegex.MatchString(content) {
+			leaks = append(leaks, LeakMatch{File: file, Line: currentLine, Content: content, Type: "Stripe Key"})
+		} else if apiKeyRegex.MatchString(content) {
+			leaks = append(leaks, LeakMatch{File: file, Line: currentLine, Content: content, Type: "Potential API Key/Secret"})
+		} else if emailRegex.MatchString(content) {
+			// Optional: only alert if it looks like a leak (e.g. not a known contributor email)
+			leaks = append(leaks, LeakMatch{File: file, Line: currentLine, Content: content, Type: "PII (Email)"})
+		}
+	}
+
+	return leaks, nil
 }
 
 func isInsecure(relPath string, fullPath string, info os.FileInfo) bool {
