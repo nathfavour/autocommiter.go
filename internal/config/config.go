@@ -26,6 +26,8 @@ func DefaultConfig() Config {
 	enableGitmoji := false
 	updateGitignore := false
 	secureMode := true
+	secureDetectPII := true
+	secureDetectBulky := true
 	skipConfirmation := false
 	preferNoReplyEmail := true
 	enableForkSync := false
@@ -193,5 +195,11 @@ func SetSelectedModel(model string) error {
 		return err
 	}
 	config.SelectedModel = &model
+	return SaveConfig(config)
+}
+
+	return SaveConfig(config)
+}
+SelectedModel = &model
 	return SaveConfig(config)
 }
