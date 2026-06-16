@@ -27,6 +27,7 @@ rootCmd = &cobra.Command{
 	}
 	repoPath string
 	noPush   bool
+	noSecure bool
 	force    bool
 	user     string
 
@@ -63,11 +64,12 @@ func main() {
 		return nil
 	}
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return processor.GenerateCommit(repoPath, noPush, force)
+		return processor.GenerateCommit(repoPath, noPush, noSecure, force)
 	}
 
 	rootCmd.PersistentFlags().StringVarP(&repoPath, "repo", "r", "", "Path to git repository (defaults to current directory)")
 	rootCmd.PersistentFlags().BoolVarP(&noPush, "no-push", "n", false, "Skip pushing after commit")
+	rootCmd.PersistentFlags().BoolVar(&noSecure, "no-secure", false, "Skip SECURE_MODE checks for this run")
 	rootCmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "Don't ask for confirmation before committing")
 	rootCmd.PersistentFlags().StringVarP(&user, "user", "u", "", "Set default GitHub user for this repository")
 
