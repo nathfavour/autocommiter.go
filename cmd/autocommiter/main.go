@@ -77,7 +77,7 @@ func main() {
 		Use:   "generate",
 		Short: "Generate commit message and commit changes",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return processor.GenerateCommit(repoPath, noPush, force)
+			return processor.GenerateCommit(repoPath, noPush, noSecure, force)
 		},
 	}
 	rootCmd.AddCommand(generateCmd)
