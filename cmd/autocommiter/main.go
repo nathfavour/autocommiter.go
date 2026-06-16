@@ -399,6 +399,56 @@ func main() {
 	}
 	rootCmd.AddCommand(toggleSecureModeCmd)
 
+	var toggleSecurePiiCmd = &cobra.Command{
+		Use:   "toggle-secure-pii",
+		Short: "Enable/disable PII/Leak detection in code diffs",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := true
+			if cfg.SecureDetectPII != nil {
+				current = *cfg.SecureDetectPII
+			}
+			newVal := !current
+			cfg.SecureDetectPII = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ PII detection enabled")
+			} else {
+				color.Green("✓ PII detection %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleSecurePiiCmd)
+
+	var toggleSecureBulkyCmd = &cobra.Command{
+		Use:   "toggle-secure-bulky",
+		Short: "Enable/disable sensitive/bulky file detection",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, _ := config.LoadConfig()
+			current := true
+			if cfg.SecureDetectBulky != nil {
+				current = *cfg.SecureDetectBulky
+			}
+			newVal := !current
+			cfg.SecureDetectBulky = &newVal
+			if err := config.SaveConfig(cfg); err != nil {
+				return err
+			}
+
+			if newVal {
+				color.Green("✓ Bulky file detection enabled")
+			} else {
+				color.Green("✓ Bulky file detection %s", color.YellowString("disabled"))
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(toggleSecureBulkyCmd)
+
 	var getConfigCmd = &cobra.Command{
 		Use:   "get-config",
 		Short: "Display current configuration",
@@ -472,6 +522,19 @@ func main() {
 			}
 			if secure {
 				color.Green("  Yes")
+
+				// Sub-configs
+				pii := true
+				if cfg.SecureDetectPII != nil {
+					pii = *cfg.SecureDetectPII
+				}
+				bulky := true
+				if cfg.SecureDetectBulky != nil {
+					bulky = *cfg.SecureDetectBulky
+				}
+
+				fmt.Printf("  - Detect PII/Leaks:   %s\n", formatBool(pii))
+				fmt.Printf("  - Detect Bulky Files: %s\n", formatBool(bulky))
 			} else {
 				color.Red("  No")
 			}
