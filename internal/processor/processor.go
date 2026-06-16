@@ -163,7 +163,7 @@ func AnalyzeRepo(repoPath string, applyChanges bool) error {
 	return nil
 }
 
-func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
+func ProcessSingleRepo(repoRoot string, noPush bool, noSecure bool, force bool) error {
 	color.Cyan("📂 Repository: %s", color.New(color.Bold).Sprint(repoRoot))
 
 	// 1. Ensure gitignore safety (fast check)
@@ -193,7 +193,12 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 
 	// 3. SECURE_MODE: Check for sensitive/bulky files
 	cfg, _ := config.LoadMergedConfig(repoRoot)
-	if cfg.SecureMode == nil || *cfg.SecureMode {
+	isSecureEnabled := true
+	if cfg.SecureMode != nil {
+		isSecureEnabled = *cfg.SecureMode
+	}
+
+	if isSecureEnabled && !noSecure {
 		color.Cyan("🔒 SECURE_MODE: Scanning staged files for security leaks...")
 		insecureFiles, err := RunSecurityCheck(repoRoot)
 		if err != nil {
@@ -207,6 +212,8 @@ func ProcessSingleRepo(repoRoot string, noPush bool, force bool) error {
 				return err
 			}
 		}
+	} else if noSecure {
+		color.Yellow("⚠️  SECURE_MODE: Skipped via --no-secure flag.")
 	}
 
 	if len(stagedFiles) == 0 {
