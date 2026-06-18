@@ -3,9 +3,10 @@ module github.com/nathfavour/autocommiter.go
 go 1.24.0
 
 require (
-	github.com/cli/go-gh/v2 v2.9.0
+	github.com/cli/go-gh/v2 v2.12.1
 	github.com/fatih/color v1.18.0
 	github.com/spf13/cobra v1.10.2
+	modernc.org/sqlite v1.45.0
 )
 
 require (
@@ -25,5 +26,4 @@ require (
 	modernc.org/libc v1.67.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.45.0 // indirect
 )
